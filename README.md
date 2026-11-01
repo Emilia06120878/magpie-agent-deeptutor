@@ -19,11 +19,25 @@ Supports **Windows / macOS / Linux**, target **DeepTutor ≥ 1.7.0**.
 
 ### Installation
 
-Add the repository from Magpie → **Plugins**:
+One command, from a terminal:
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/Emilia06120878/magpie-agent-deeptutor/main/install.sh | sh
+```
+
+```powershell
+# Windows
+powershell -c "irm https://raw.githubusercontent.com/Emilia06120878/magpie-agent-deeptutor/main/install.ps1 | iex"
+```
+
+Or add the repository from Magpie → **Plugins**:
 
 ```text
 github:Emilia06120878/magpie-agent-deeptutor
 ```
+
+Or with the Magpie CLI: `magpie plugin add github:Emilia06120878/magpie-agent-deeptutor`
 
 ---
 
@@ -38,7 +52,7 @@ github:Emilia06120878/magpie-agent-deeptutor
 ### Steps
 
 1. **Run the preflight check**: `node tools/doctor.mjs`. It discovers the DeepTutor directory, validates the version and the catalog, and prints the `DEEPTUTOR_HOME` value to export.
-2. **Install the plugin**: `magpie plugin add <path>`, then `magpie ls` should list DeepTutor.
+2. **Install the plugin**: run the one-line installer above, or `magpie plugin add github:Emilia06120878/magpie-agent-deeptutor`. Then `magpie ls` should list DeepTutor.
 3. **Select a model in Magpie**: Agents page → **DeepTutor** → model.
 4. **Switch models in DeepTutor**: open DeepTutor's own settings; the `Magpie` profile already lists every model.
 
@@ -51,7 +65,8 @@ github:Emilia06120878/magpie-agent-deeptutor
 | Action | Command |
 | :--- | :--- |
 | **Preflight check** | `node tools/doctor.mjs` |
-| **Install the plugin** | `magpie plugin add <path>` |
+| **Install the plugin** | `curl -fsSL https://raw.githubusercontent.com/Emilia06120878/magpie-agent-deeptutor/main/install.sh \| sh` |
+| **Install without the script** | `magpie plugin add github:Emilia06120878/magpie-agent-deeptutor` |
 | **List detected agents** | `magpie ls` |
 | **Show DeepTutor's takeover state** | `magpie deeptutor` |
 | **Disconnect and restore the config** | `magpie deeptutor default` |
