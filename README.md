@@ -1,25 +1,25 @@
-[English](README.md) | [简体中文](README.zh-CN.md)
+[English](README.en.md) | [简体中文](README.md)
 
 # DeepTutor · Magpie Agent
 
-Lets DeepTutor use every model and routing group configured in Magpie. Magpie's Agent page does not know DeepTutor by default; once this plugin is installed it appears in the list.
-Supports **Windows / macOS / Linux**, target **DeepTutor ≥ 1.7.0**.
+让 DeepTutor 直接使用 Magpie 中配置的全部模型与路由组。Magpie 的 Agent 页原本不认识 DeepTutor，装上这个插件之后它出现在列表里。
+支持 **Windows / macOS / Linux**，目标版本 **DeepTutor ≥ 1.7.0**。
 
 ---
 
-## Features
+## 特性
 
-- **Every model in one write**: the models and routing groups configured in Magpie are written into DeepTutor in a single pass, and are switched afterwards from DeepTutor's own model list without returning to Magpie.
-- **The same configuration DeepTutor reads**: writes `model_catalog.json`, the file DeepTutor resolves its LLM route from. DeepTutor's source and startup are untouched.
-- **Restored on disconnect**: original values are backed up per key, and disconnecting or uninstalling restores the configuration as it was before, leaving existing profiles intact.
-- **Nothing else touched**: `embedding`, `search` and `setup.json` are left alone.
-- **Cross-platform**: one set of paths and commands across Windows, macOS and Linux.
+- **全部模型一次接入**：Magpie 中配置的模型与路由组会一次性写入 DeepTutor，之后在 DeepTutor 自己的模型列表里可直接切换，不必回到 Magpie 重新配置。
+- **与 DeepTutor 官方配置一致**：写入的是 DeepTutor 运行时真正读取的 `model_catalog.json`，不改 DeepTutor 源码，也不改它的启动方式。
+- **断开即还原**：连接时逐键备份原值，断开或卸载后恢复为写入前的配置，不影响原有的 profile。
+- **不动其它配置**：`embedding`、`search`、`setup.json` 均不修改。
+- **跨平台**：Windows、macOS、Linux 使用同一套配置路径与命令。
 
 ---
 
-### Installation
+### 安装方式
 
-One command, from a terminal:
+一条命令装好：
 
 ```bash
 # macOS / Linux
@@ -31,75 +31,75 @@ curl -fsSL https://raw.githubusercontent.com/Emilia06120878/magpie-agent-deeptut
 powershell -c "irm https://raw.githubusercontent.com/Emilia06120878/magpie-agent-deeptutor/main/install.ps1 | iex"
 ```
 
-Or add the repository from Magpie → **Plugins**:
+也可以在 Magpie → **Plugins** 中添加仓库地址：
 
 ```text
 github:Emilia06120878/magpie-agent-deeptutor
 ```
 
-Or with the Magpie CLI: `magpie plugin add github:Emilia06120878/magpie-agent-deeptutor`
+或用 Magpie CLI：`magpie plugin add github:Emilia06120878/magpie-agent-deeptutor`
 
 ---
 
-## Install and first run
+## 安装与快速上手
 
-### Prerequisites
+### 前置条件
 
-- **Magpie** installed, with the gateway answering on `127.0.0.1:3425`.
-- **DeepTutor 1.7.0 or newer** installed, with `DEEPTUTOR_HOME` pointing at its runtime directory. DeepTutor's own launcher sets that variable.
-- At least one model or routing group configured in Magpie.
+- 本机已安装 **Magpie**，网关在 `127.0.0.1:3425` 正常响应。
+- 本机已安装 **DeepTutor 1.7.0 及以上**，`DEEPTUTOR_HOME` 指向它的运行目录（DeepTutor 自己的启动脚本会设置这个变量）。
+- Magpie 中至少已添加一个可用模型或路由组。
 
-### Steps
+### 步骤
 
-1. **Run the preflight check**: `node tools/doctor.mjs`. It discovers the DeepTutor directory, validates the version and the catalog, and prints the `DEEPTUTOR_HOME` value to export.
-2. **Install the plugin**: run the one-line installer above, or `magpie plugin add github:Emilia06120878/magpie-agent-deeptutor`. Then `magpie ls` should list DeepTutor.
-3. **Select a model in Magpie**: Agents page → **DeepTutor** → model.
-4. **Switch models in DeepTutor**: open DeepTutor's own settings; the `Magpie` profile already lists every model.
+1. **运行体检**：`node tools/doctor.mjs`。它会探测 DeepTutor 目录、校验版本与配置，并打印应当设置的 `DEEPTUTOR_HOME`。
+2. **安装插件**：运行上面的安装脚本，或执行 `magpie plugin add github:Emilia06120878/magpie-agent-deeptutor`，随后 `magpie ls` 应能列出 DeepTutor。
+3. **在 Magpie 中选择模型**：Agents 页面 → **DeepTutor** → 模型。
+4. **在 DeepTutor 中切换模型**：打开 DeepTutor 自己的设置，`Magpie` profile 下已列出全部模型，直接切换即可。
 
-> DeepTutor resolves its model route when a chat starts, so a new chat is enough. For a long-lived `deeptutor serve` process, restarting once is safer. The plugin neither starts nor stops that service.
+> DeepTutor 在对话开始时解析模型路由，新开一个对话即可生效；`deeptutor serve` 长期运行时重启一次更稳妥。插件不启动也不停止该服务。
 
 ---
 
-## Commands
+## 常用管理命令
 
-| Action | Command |
+| 操作 | 命令 |
 | :--- | :--- |
-| **Preflight check** | `node tools/doctor.mjs` |
-| **Install the plugin** | `curl -fsSL https://raw.githubusercontent.com/Emilia06120878/magpie-agent-deeptutor/main/install.sh \| sh` |
-| **Install without the script** | `magpie plugin add github:Emilia06120878/magpie-agent-deeptutor` |
-| **List detected agents** | `magpie ls` |
-| **Show DeepTutor's takeover state** | `magpie deeptutor` |
-| **Disconnect and restore the config** | `magpie deeptutor default` |
-| **Remove the plugin** | `magpie plugin rm magpie-agent-deeptutor` |
-| **Run the unit tests** | `node test/run-tests.mjs` |
+| **安装前体检** | `node tools/doctor.mjs` |
+| **安装插件** | `curl -fsSL https://raw.githubusercontent.com/Emilia06120878/magpie-agent-deeptutor/main/install.sh \| sh` |
+| **不用脚本直接装** | `magpie plugin add github:Emilia06120878/magpie-agent-deeptutor` |
+| **查看已检测到的 agent** | `magpie ls` |
+| **查看 DeepTutor 接管状态** | `magpie deeptutor` |
+| **断开并还原配置** | `magpie deeptutor default` |
+| **删除插件** | `magpie plugin rm magpie-agent-deeptutor` |
+| **运行单元测试** | `node test/run-tests.mjs` |
 
 ---
 
-## Architecture
+## 架构与工作流程
 
 ```text
-Magpie Agent page
-    │  model selected
+Magpie Agent 页
+    │  选中模型
     ▼
-Magpie agent plugin deeptutor.agent.mjs
-    │  receives the gateway and the model list
+Magpie Agent 插件 deeptutor.agent.mjs
+    │  接收 gateway 与模型列表
     ▼
-writes three key paths
+写入三个键路径
     $DEEPTUTOR_HOME/data/user/settings/model_catalog.json
-      services.llm.profiles[]          ← every model Magpie provides
+      services.llm.profiles[]          ← Magpie 提供的全部模型
       services.llm.active_profile_id   ← llm-profile-magpie
-      services.llm.active_model_id     ← the model selected in Magpie
+      services.llm.active_model_id     ← Magpie 中选中的那个
     │
     ▼
-DeepTutor starts a chat
+DeepTutor 对话开始
     │  active_profile_id → profile → active_model_id
     ▼
-local Magpie gateway http://127.0.0.1:3425
+本地 Magpie 网关 http://127.0.0.1:3425
     ▼
-model provider
+模型提供商
 ```
 
-The resulting `services.llm` structure (abridged):
+写入后的 `services.llm` 结构（节选）：
 
 ```json
 {
@@ -128,54 +128,55 @@ The resulting `services.llm` structure (abridged):
 
 ---
 
-## Notes
+## 注意事项
 
-- Set `DEEPTUTOR_HOME` before installing. When it is unset the path resolves to the drive root (`\data\user\settings\model_catalog.json` on Windows); `tools/doctor.mjs` catches this beforehand.
-- DeepTutor 1.7.0 or newer is required. On older versions the agent appears in the list but cannot be taken over, and `tools/doctor.mjs` reports the reason.
-- A model switch takes effect on the next chat; for a long-lived `deeptutor serve` process, restarting once is safer.
+- 安装前请设置 `DEEPTUTOR_HOME`。未设置时路径会解析到磁盘根目录（Windows 下为 `\data\user\settings\model_catalog.json`），`tools/doctor.mjs` 会提前发现这种情况。
+- 版本要求 DeepTutor 1.7.0 及以上。低于该版本时插件会出现在列表中但无法接管，`tools/doctor.mjs` 会说明原因。
+- 切换模型后需要新开对话才会生效；`deeptutor serve` 长期运行时重启一次更稳妥。
 
 ---
 
-## Troubleshooting
+## 常见问题
 
-### `Invalid port: ':1]'` on a chat
+### 对话时报 `Invalid port: ':1]'`
 
-This is an environment issue, not a plugin one. When `NO_PROXY` contains both `::1` and `[::1]`, httpx expands `[::1]` into `all://*[::1]`, fails to parse it, and DeepTutor raises the error while building the model connection:
+这是代理环境变量的问题，与插件无关。`NO_PROXY` 里如果同时写了 `::1` 和 `[::1]`，httpx 会把 `[::1]` 展开成 `all://*[::1]` 并解析失败，DeepTutor 在建立模型连接时就会抛出：
 
 ```
 httpx.InvalidURL: Invalid port: ':1]'
 ```
 
-Drop `[::1]` from `NO_PROXY` and keep `::1`:
+把 `NO_PROXY` 里的 `[::1]` 去掉，只保留 `::1` 即可：
 
 ```text
 NO_PROXY=10.69.24.25,198.18.0.1,.local,localhost,127.0.0.1,::1
 ```
 
-### A model switch does not take effect
+### 切换模型后没有生效
 
-DeepTutor resolves its model route when a chat starts. A new chat is enough; for a long-lived `deeptutor serve` process, restarting once is safer.
+DeepTutor 在对话开始时解析模型路由。新开一个对话即可；`deeptutor serve` 长期运行时重启一次更稳妥。
 
-### The model list is empty after takeover
+### 接管后模型列表是空的
 
-No usable model is configured in Magpie yet. Add an account or a model in Magpie, then select a model again.
+Magpie 中还没有配置可用模型。先在 Magpie 里添加账号或模型，再重新选择一次。
 
 ---
 
-## Repository layout
+## 仓库结构
 
 ```text
-deeptutor.agent.mjs           plugin entry point
-package.json                  package metadata and the Magpie declaration
-tools/doctor.mjs              preflight: discovery, version check, catalog validation
-test/run-tests.mjs            connect() tests, 30 assertions
-test/fixtures/                sample configuration files
-docs/agent-plugin-contract.md the Magpie agent plugin contract
-docs/deeptutor-config.md      where DeepTutor keeps its model configuration
+deeptutor.agent.mjs           插件入口
+package.json                  包信息与 Magpie 插件声明
+install.sh / install.ps1      一键安装脚本（macOS/Linux · Windows）
+tools/doctor.mjs              安装前检查：目录探测、版本校验、配置校验
+test/run-tests.mjs            connect() 测试，30 条断言
+test/fixtures/                示例配置文件
+docs/agent-plugin-contract.md Magpie Agent 插件契约
+docs/deeptutor-config.md      DeepTutor 的模型配置位置
 ```
 
 ---
 
-## License
+## 开源协议
 
-Released under the [MIT License](LICENSE).
+本项目遵循 [MIT License](LICENSE)。
