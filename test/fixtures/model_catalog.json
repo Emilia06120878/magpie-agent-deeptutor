@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "connectors": [
+    {
+      "id": "conn-00000000-0000-0000-0000-000000000001",
+      "name": "magpie",
+      "provider": "custom",
+      "source_service": "llm",
+      "api_key": "",
+      "base_url": "http://127.0.0.1:3425",
+      "api_version": "",
+      "api_format": "openai_chat",
+      "extra_headers": {}
+    }
+  ],
+  "services": {
+    "llm": {
+      "active_profile_id": "llm-profile-agent-setup",
+      "active_model_id": "llm-model-agent-setup",
+      "profiles": [
+        {
+          "id": "llm-profile-agent-setup",
+          "name": "Agent Setup",
+          "binding": "custom",
+          "base_url": "http://127.0.0.1:3425",
+          "api_key": "",
+          "api_version": "",
+          "extra_headers": {},
+          "models": [
+            {
+              "id": "llm-model-agent-setup",
+              "name": "workbuddyQoderTrae-deepseek-flash",
+              "model": "group/workbuddyqodertrae-deepseek-flash"
+            }
+          ],
+          "api_format": "openai_chat",
+          "wire_api": "chat_completions"
+        }
+      ]
+    },
+    "task": { "active_profile_id": null, "active_model_id": null, "profiles": [] },
+    "embedding": {
+      "active_profile_id": "embedding-profile-agent-setup",
+      "active_model_id": "embedding-model-agent-setup",
+      "profiles": [
+        {
+          "id": "embedding-profile-agent-setup",
+          "name": "Agent Setup",
+          "binding": "custom",
+          "base_url": "https://models.example.com/standard/v1/embeddings",
+          "api_key": "",
+          "api_version": "",
+          "extra_headers": {},
+          "models": [
+            {
+              "id": "embedding-model-agent-setup",
+              "name": "qwen3-vl-embedding-8b",
+              "model": "qwen3-vl-embedding-8b",
+              "dimension": 4096,
+              "supported_dimensions": ""
+            }
+          ]
+        }
+      ]
+    },
+    "search": {
+      "active_profile_id": "search-profile-agent-setup",
+      "profiles": [
+        {
+          "id": "search-profile-agent-setup",
+          "name": "Agent Setup",
+          "provider": "duckduckgo",
+          "base_url": "",
+          "api_key": "",
+          "api_version": "",
+          "proxy": "",
+          "models": []
+        }
+      ]
+    },
+    "tts": { "active_profile_id": null, "active_model_id": null, "profiles": [] },
+    "stt": { "active_profile_id": null, "active_model_id": null, "profiles": [] },
+    "imagegen": { "active_profile_id": null, "active_model_id": null, "profiles": [] },
+    "videogen": { "active_profile_id": null, "active_model_id": null, "profiles": [] }
+  }
+}
