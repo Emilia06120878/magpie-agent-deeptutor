@@ -70,6 +70,13 @@ export const agent = {
   model: 'services.llm.active_model_id',
   notice:
     'DeepTutor resolves its LLM route when a chat starts: start a new chat (or restart `deeptutor serve`) to use the new model.',
+  library: {
+    // Magpie writes the Library's MCP picks here in Claude's object shape.
+    // index.mjs translates the bridge into DeepTutor's `servers` object.
+    // The file is Magpie-owned, not a DeepTutor config file.
+    mcp: '~/.config/magpie/deeptutor-mcp-bridge.json',
+    mcpFormat: 'claude',
+  },
 };
 
 /**

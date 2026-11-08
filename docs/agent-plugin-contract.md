@@ -39,7 +39,7 @@ export function connect(input) { /* returns key-path -> value pairs */ }
 | `bin`, `dir` | a command that must be on `PATH` and/or a config dir — used to decide "installed / not detected". A plugin must **never** create files just to be detected |
 | `ua` | substrings of the User-Agent used to attribute usage to this agent |
 | `notice` | shown after a model switch (e.g. "restart the app") |
-| `library` | `{ instructions, mcp, mcpFormat, skills }` |
+| `library` | `{ instructions, mcp, mcpFormat, skills }`; `mcp` requires one of Magpie's supported `mcpFormat` values. `claude` writes `{"mcpServers": {...}}`. |
 
 `connect(input)` receives:
 
@@ -85,6 +85,12 @@ Consequences for plugin design: an agent plugin cannot probe the filesystem, can
 declarative mapping plus a pure function. Anything that needs the filesystem (locating an
 installation, version checks, backups) has to live in a normal Node/Bun tool shipped next
 to the plugin (see `tools/doctor.mjs`), not in `connect()`.
+
+A package that declares `magpie.agent` may also declare `main`: Magpie loads that module
+in its Bun plugin host with the same plugin-function shape as a provider plugin. This is
+the supported route for installation-time side effects such as watching Magpie's Library
+MCP bridge file and translating it into the agent's own MCP format. The agent descriptor
+itself remains a pure moejs module. See `index.mjs` and `docs/deeptutor-mcp.md`.
 
 ## 5. Testing without touching a real install
 

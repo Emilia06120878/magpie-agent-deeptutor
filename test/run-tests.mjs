@@ -95,6 +95,10 @@ test('id is a legal Magpie agent id and does not shadow a built-in', () => {
     assert.notEqual(agent.id, builtin);
   }
 });
+test('library declares a Claude-format MCP bridge', () => {
+  assert.equal(agent.library.mcp, '~/.config/magpie/deeptutor-mcp-bridge.json');
+  assert.equal(agent.library.mcpFormat, 'claude');
+});
 
 console.log('\nconnect() output');
 test('returns exactly the three llm key paths', () => {

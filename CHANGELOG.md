@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.2.0 — 2026-11-08
+
+**Library MCP support**
+
+- DeepTutor is now offered as a selectable agent in Magpie's Library → MCP through
+  `agent.library.mcp` with `mcpFormat: "claude"`.
+- `index.mjs` watches Magpie's Claude-shaped bridge file and translates selected
+  HTTP, SSE and stdio servers into DeepTutor 1.7.0's `servers` registry at
+  `$DEEPTUTOR_HOME/data/user/settings/mcp.json`.
+- Synced servers carry the `magpie-deeptutor-` prefix. User-added servers and
+  DeepTutor-owned fields on synced entries are preserved; stale owned entries
+  are removed when a Library assignment is withdrawn. Unreadable bridge or
+  registry JSON is never overwritten, and unsupported transports are reported.
+- `tools/doctor.mjs` reports the bridge, the MCP registry and the synced/user-owned
+  counts. New tests cover the descriptor, translation, ownership, empty selections,
+  missing `DEEPTUTOR_HOME`, and the plugin host.
+- The model route written by `connect()` is unchanged.
+
+**Known limitation**
+
+- DeepTutor does not watch `mcp.json`. Restart `deeptutor serve` (or save once in
+  its MCP settings) to refresh live connections after a Library change.
+
 ## 0.1.0 — 2026-11-01
 
 First public release.

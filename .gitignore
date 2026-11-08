@@ -3,5 +3,11 @@ node_modules/
 .DS_Store
 Thumbs.db
 
+# local OMC runtime state
+.omc/
+
 # local scratch: fixtures written by a sandbox run
 test/.tmp/
+
+# empty runtime log tree some DeepTutor commands make in the package folder
+data/

@@ -1,11 +1,12 @@
 {
   "name": "magpie-agent-deeptutor",
-  "version": "0.1.0",
-  "description": "Magpie agent plugin that puts DeepTutor on Magpie's Agent page and writes every Magpie model into DeepTutor's own model list",
+  "version": "0.2.0",
+  "description": "Magpie agent plugin that puts DeepTutor on Magpie's Agent page, writes every Magpie model into DeepTutor's own model list, and syncs Library MCP servers",
   "type": "module",
   "private": true,
+  "main": "./index.mjs",
   "license": "MIT",
-  "keywords": ["magpie", "magpie-agent", "deeptutor", "agent"],
+  "keywords": ["magpie", "magpie-agent", "deeptutor", "agent", "mcp"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Emilia06120878/magpie-agent-deeptutor.git"
@@ -15,7 +16,9 @@
     "url": "https://github.com/Emilia06120878/magpie-agent-deeptutor/issues"
   },
   "files": [
+    "index.mjs",
     "deeptutor.agent.mjs",
+    "lib/",
     "README.md",
     "README.en.md",
     "LICENSE",
@@ -28,10 +31,11 @@
     "agent": "./deeptutor.agent.mjs"
   },
   "scripts": {
-    "test": "node test/run-tests.mjs",
+    "test": "node --test test/*.test.mjs && node test/run-tests.mjs",
     "doctor": "node tools/doctor.mjs"
   },
   "engines": {
+    "bun": ">=1.1.0",
     "node": ">=18"
   }
 }

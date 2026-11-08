@@ -9,6 +9,8 @@
 //   2. candidate paths    — common install locations + the dir of the `deeptutor` binary
 //   3. manual route       — --home <path>
 //
+// It also reports the Library MCP bridge and DeepTutor's live mcp.json.
+//
 // Usage:
 //   node tools/doctor.mjs
 //   node tools/doctor.mjs --home "E:\\DeepTutor\\workspace"
@@ -21,6 +23,8 @@ import { execFileSync } from 'node:child_process';
 import { homedir, platform } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { MCP_SERVER_PREFIX, mcpBridgePath, mcpConfigPath, statePath } from '../lib/constants.mjs';
 
 // tools/ lives one level below the package root — that is what you hand to `magpie plugin add`.
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -202,6 +206,37 @@ function inspectCatalog(file) {
   }
 }
 
+function inspectMcp(file) {
+  try {
+    const json = JSON.parse(readFileSync(file, 'utf8'));
+    const servers = json?.servers && typeof json.servers === 'object' && !Array.isArray(json.servers)
+      ? json.servers
+      : {};
+    const names = Object.keys(servers);
+    return {
+      ok: true,
+      exists: true,
+      servers: names.length,
+      userServers: names.filter((name) => !name.startsWith(MCP_SERVER_PREFIX)).length,
+      syncedServers: names.filter((name) => name.startsWith(MCP_SERVER_PREFIX)).length,
+    };
+  } catch (err) {
+    return { ok: false, exists: existsSync(file), reason: err.message };
+  }
+}
+
+function inspectBridge(file) {
+  try {
+    const json = JSON.parse(readFileSync(file, 'utf8'));
+    const servers = json?.mcpServers && typeof json.mcpServers === 'object' && !Array.isArray(json.mcpServers)
+      ? json.mcpServers
+      : {};
+    return { ok: true, exists: true, servers: Object.keys(servers).length };
+  } catch (err) {
+    return { ok: false, exists: existsSync(file), reason: err.message };
+  }
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const found = [];
@@ -217,6 +252,11 @@ function main() {
 
   const bin = findBinary();
   const version = detectVersion(bin, chosen?.path);
+  const doctorEnv = chosen ? { ...process.env, DEEPTUTOR_HOME: chosen.path } : process.env;
+  const bridge = mcpBridgePath(doctorEnv);
+  const mcp = mcpConfigPath(doctorEnv);
+  const bridgeInfo = inspectBridge(bridge);
+  const mcpInfo = inspectMcp(mcp);
 
   let verdict = 'ready';
   const problems = [];
@@ -226,6 +266,12 @@ function main() {
     if (!version) problems.push('could not determine the DeepTutor version (run `deeptutor --version`)');
     else if (!versionOk(version.parts)) problems.push(`DeepTutor ${version.version} < 1.7.0: detected, but not take-over-able`);
     if (!bin) problems.push('`deeptutor` is not on PATH, so Magpie will report the agent as not detected');
+    if (chosen) {
+      // The plugin host creates the bridge and mcp.json on first load. A missing
+      // file is normal before installation; an unreadable existing one is not.
+      if (bridgeInfo.exists && !bridgeInfo.ok) problems.push(`MCP bridge file cannot be parsed: ${bridgeInfo.reason}`);
+      if (mcpInfo.exists && !mcpInfo.ok) problems.push(`DeepTutor MCP registry cannot be parsed: ${mcpInfo.reason}`);
+    }
     if (problems.length) verdict = version && !versionOk(version.parts) ? 'too-old' : 'not-ready';
   }
 
@@ -240,6 +286,14 @@ function main() {
     version,
     minVersion: MIN_VERSION.join('.'),
     allFound: found.map((f) => ({ path: f.path, why: f.why })),
+    mcp: {
+      bridgePath: bridge,
+      bridge: bridgeInfo,
+      configPath: mcp,
+      config: mcpInfo,
+      statePath: statePath(doctorEnv),
+      syncedPrefix: MCP_SERVER_PREFIX,
+    },
     suggested: chosen ? `DEEPTUTOR_HOME=${chosen.path}` : null,
   };
 
@@ -259,6 +313,10 @@ function main() {
       const c = chosen.catalogInfo;
       console.log(`  services.llm  : ${c.profiles} profile(s), active=${c.activeProfileId ?? 'null'}/${c.activeModelId ?? 'null'}`);
     }
+    console.log('  MCP bridge    :', bridge);
+    console.log('  MCP registry  :', mcp);
+    if (bridgeInfo.ok) console.log(`  Library MCP   : ${bridgeInfo.servers} selected`);
+    if (mcpInfo.ok) console.log(`  DeepTutor MCP : ${mcpInfo.servers} total, ${mcpInfo.syncedServers} synced, ${mcpInfo.userServers} user-owned`);
     if (found.length > 1) {
       console.log('  other hits    :');
       for (const f of found.slice(1)) console.log(`                  ${f.path}  (${f.why})`);
@@ -270,6 +328,7 @@ function main() {
     console.log('READY — the plugin can take over this installation.');
     console.log(`Install:  magpie plugin add ${PLUGIN_ROOT}`);
     console.log('Then:     magpie agents   (DeepTutor should be listed)');
+    console.log('Library:  assign MCP servers to DeepTutor; the bridge syncs them to mcp.json');
     process.exit(0);
   }
 
