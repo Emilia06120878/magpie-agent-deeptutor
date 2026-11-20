@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0 — 2026-11-20
+
+**Open DeepTutor desktop app support**
+
+- The plugin host links `~/.config/magpie/deeptutor-home` to the DeepTutor home: `$DEEPTUTOR_HOME`
+  when set, otherwise Open DeepTutor's data folder (`~/Library/Application Support/Open DeepTutor/workspace`,
+  `%LOCALAPPDATA%\Open DeepTutor\workspace`) once it holds a `model_catalog.json`.
+- The descriptor's `dir` and `config` point through that link, so Magpie's own key-path merge, backup and
+  restore still write the real catalog (Magpie follows symlinks). `bin: "deeptutor"` is gone: the desktop app
+  puts nothing on PATH. Without a home there is no link, so the agent is not detected and nothing is written,
+  which also fixes 0.2.0 writing to `/data/...` when `DEEPTUTOR_HOME` was unset.
+- The link is only ever replaced, never removed recursively; a real folder in its place is left alone.
+- MCP sync uses the same home. `tools/doctor.mjs` finds the desktop app and reads its version from `active.json`.
+- Verified end to end against Magpie 0.1.3960 in a sandbox: detection, connect, disconnect-restore.
+
 ## 0.2.0 — 2026-11-08
 
 **Library MCP support**

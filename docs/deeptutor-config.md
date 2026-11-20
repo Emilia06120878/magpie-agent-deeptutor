@@ -47,13 +47,12 @@ cd /d "%DEEPTUTOR_HOME%"
 "E:\DeepTutor\bin\deeptutor.exe" %*
 ```
 
-So `$DEEPTUTOR_HOME/data/user/settings/model_catalog.json` is the correct, portable
-target for the plugin — on Windows, macOS and Linux alike, as long as `DEEPTUTOR_HOME`
-is set (which DeepTutor's launcher does).
+The catalog is still that file. Magpie cannot expand a per-machine home, so the plugin
+host links `~/.config/magpie/deeptutor-home` to `$DEEPTUTOR_HOME` (when set) or to Open
+DeepTutor's data folder, and the agent descriptor writes through the link.
 
-> If `DEEPTUTOR_HOME` is unset, Magpie expands `$DEEPTUTOR_HOME` to an **empty string**
-> and would end up writing `\data\user\settings\model_catalog.json` on Windows
-> (`/data/...` elsewhere). Always run `node tools/doctor.mjs` before installing.
+> When neither `$DEEPTUTOR_HOME` nor the desktop catalog exists, no link is made and
+> Magpie does not detect the agent. `node tools/doctor.mjs` prints the home it found.
 
 ## Shape of `services.llm`
 

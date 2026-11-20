@@ -1,6 +1,6 @@
 {
   "name": "magpie-agent-deeptutor",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Magpie agent plugin that puts DeepTutor on Magpie's Agent page, writes every Magpie model into DeepTutor's own model list, and syncs Library MCP servers",
   "type": "module",
   "private": true,
