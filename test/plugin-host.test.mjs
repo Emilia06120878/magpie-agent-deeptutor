@@ -11,6 +11,7 @@ test('plugin host creates the bridge, syncs MCP and records state in a sandbox H
   const deeptutorHome = path.join(root, 'workspace');
   const settings = path.join(deeptutorHome, 'data', 'user', 'settings');
   fs.mkdirSync(settings, { recursive: true });
+  fs.writeFileSync(path.join(settings, 'model_catalog.json'), '{}\n');
   const bridgeFile = path.join(home, '.config', 'magpie', 'deeptutor-mcp-bridge.json');
   const mcpFile = path.join(settings, 'mcp.json');
   fs.mkdirSync(path.dirname(bridgeFile), { recursive: true });
@@ -29,5 +30,9 @@ test('plugin host creates the bridge, syncs MCP and records state in a sandbox H
   const state = JSON.parse(fs.readFileSync(path.join(home, '.config', 'magpie', '.magpie-deeptutor-state.json'), 'utf8'));
   assert.equal(state.lastLoad.mcp.ok, true);
   assert.equal(state.lastLoad.mcp.count, 1);
+  // The host points the Agents page's link at DEEPTUTOR_HOME.
+  const link = path.join(home, '.config', 'magpie', 'deeptutor-home');
+  assert.equal(state.lastLoad.home.ok, true);
+  assert.equal(fs.realpathSync(link), fs.realpathSync(deeptutorHome));
   fs.rmSync(root, { recursive: true, force: true });
 });

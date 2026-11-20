@@ -47,12 +47,15 @@ github:Emilia06120878/magpie-agent-deeptutor
 ### 前置条件
 
 - 本机已安装 **Magpie**，网关在 `127.0.0.1:3425` 正常响应。
-- 本机已安装 **DeepTutor 1.7.0 及以上**，`DEEPTUTOR_HOME` 指向它的运行目录。这个变量必须设置在 **Magpie 进程**的环境中：仅在终端导出，或仅由 DeepTutor 自己的启动脚本设置，Magpie 不会继承。Windows 上建议设置为用户级环境变量并重启 Magpie/桌面应用。
+- 本机已安装 **DeepTutor 1.7.0 及以上**，任选其一：
+  - **Open DeepTutor 桌面端**（macOS / Windows）：打开过一次即可，插件自动找到 `~/Library/Application Support/Open DeepTutor/workspace`（Windows：`%LOCALAPPDATA%\Open DeepTutor\workspace`），无需设置环境变量。
+  - **CLI 安装**：`DEEPTUTOR_HOME` 指向运行目录，且设置在 **Magpie 进程**的环境中（仅在终端导出不会被 Magpie 继承）。设置了它就优先于桌面端。
+- 插件加载时会建立链接 `~/.config/magpie/deeptutor-home` → 上面找到的目录，Magpie 通过它检测并写入 DeepTutor。
 - Magpie 中至少已添加一个可用模型或路由组；如需 MCP 工具，还需在资源库中有至少一个 MCP 服务。
 
 ### 步骤
 
-1. **运行体检**：`node tools/doctor.mjs`。它会探测 DeepTutor 目录、校验版本与配置，并打印应当设置的 `DEEPTUTOR_HOME`。
+1. **运行体检**：`node tools/doctor.mjs`。它会探测 DeepTutor 目录、校验版本与配置，并显示找到的目录与链接状态。
 2. **安装插件**：运行上面的安装脚本，或执行 `magpie plugin add github:Emilia06120878/magpie-agent-deeptutor`，随后 `magpie ls` 应能列出 DeepTutor。
 3. **在 Magpie 中选择模型**：Agents 页面 → **DeepTutor** → 模型。
 4. **在 DeepTutor 中切换模型**：打开 DeepTutor 自己的设置，`Magpie` profile 下已列出全部模型，直接切换即可。
@@ -87,7 +90,8 @@ Magpie Agent 插件 deeptutor.agent.mjs
     │  接收 gateway 与模型列表
     ▼
 写入三个键路径
-    $DEEPTUTOR_HOME/data/user/settings/model_catalog.json
+    ~/.config/magpie/deeptutor-home/data/user/settings/model_catalog.json
+      （链接到 $DEEPTUTOR_HOME 或桌面端 workspace）
       services.llm.profiles[]          ← Magpie 提供的全部模型
       services.llm.active_profile_id   ← llm-profile-magpie
       services.llm.active_model_id     ← Magpie 中选中的那个
@@ -109,7 +113,7 @@ Magpie 没有 DeepTutor 格式的原生 `mcpFormat`，因此插件使用与 Toon
 Magpie 资源库勾选
   → ~/.config/magpie/deeptutor-mcp-bridge.json（claude / mcpServers）
   → index.mjs 监听桥接文件并翻译
-  → $DEEPTUTOR_HOME/data/user/settings/mcp.json（DeepTutor / servers）
+  → <DeepTutor 目录>/data/user/settings/mcp.json（DeepTutor / servers）
 ```
 
 同步条目统一使用 `magpie-deeptutor-` 前缀。插件只替换或删除该前缀的条目，用户手动添加的服务以及 DeepTutor 自己管理的超时、工具白名单等字段都会保留。HTTP 翻译为 `streamableHttp`，SSE 保持 `sse`，命令服务翻译为 `stdio`；详见 [docs/deeptutor-mcp.md](docs/deeptutor-mcp.md)。
@@ -145,7 +149,8 @@ Magpie 资源库勾选
 
 ## 注意事项
 
-- 安装前请设置 `DEEPTUTOR_HOME`。未设置时 Magpie 展开模型配置路径会落到磁盘根目录；MCP 桥接会直接拒绝同步，`tools/doctor.mjs` 会提前发现这种情况。
+- 找不到 DeepTutor（未设置 `DEEPTUTOR_HOME`、桌面端也没运行过）时不建链接，Agents 页显示未检测到，不写任何文件。
+- 插件只会替换自己建的链接；若 `~/.config/magpie/deeptutor-home` 是真实目录，插件拒绝处理并保持原样。
 - 版本要求 DeepTutor 1.7.0 及以上。低于该版本时插件会出现在列表中但无法接管，`tools/doctor.mjs` 会说明原因。
 - 切换模型后需要新开对话才会生效；`deeptutor serve` 长期运行时重启一次更稳妥。
 - DeepTutor 不会自动监视 `mcp.json`。资源库勾选变化后，若 DeepTutor 正在运行，重启 `deeptutor serve` 以刷新 MCP 连接。
@@ -178,7 +183,7 @@ Magpie 中还没有配置可用模型。先在 Magpie 里添加账号或模型�
 
 ### 资源库已勾选 MCP，但 DeepTutor 没显示工具
 
-先运行 `node tools/doctor.mjs --json` 查看桥接文件与 `mcp.json` 的条目数，确认 `DEEPTUTOR_HOME` 对 Magpie 进程可见。DeepTutor 不会监视该文件；重启 `deeptutor serve`，或在 DeepTutor 的 MCP 设置页保存一次以触发重载。
+先运行 `node tools/doctor.mjs --json` 查看桥接文件与 `mcp.json` 的条目数，确认找到的 DeepTutor 目录与链接正确。DeepTutor 不会监视该文件；重启 `deeptutor serve`，或在 DeepTutor 的 MCP 设置页保存一次以触发重载。
 
 ---
 

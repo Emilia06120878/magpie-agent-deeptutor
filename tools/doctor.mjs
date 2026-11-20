@@ -5,7 +5,7 @@
 // filesystem or the environment. Everything that needs to look at the machine happens
 // here, before you install the plugin:
 //
-//   1. environment route  — DEEPTUTOR_HOME
+//   1. environment route  — DEEPTUTOR_HOME, then the Open DeepTutor desktop app's data folder
 //   2. candidate paths    — common install locations + the dir of the `deeptutor` binary
 //   3. manual route       — --home <path>
 //
@@ -18,13 +18,13 @@
 //
 // Exit codes: 0 ready, 1 not found, 2 found but not take-over-able (version/paths).
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { homedir, platform } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { MCP_SERVER_PREFIX, mcpBridgePath, mcpConfigPath, statePath } from '../lib/constants.mjs';
+import { MCP_SERVER_PREFIX, desktopHome, homeLinkPath, mcpBridgePath, mcpConfigPath, statePath } from '../lib/constants.mjs';
 
 // tools/ lives one level below the package root — that is what you hand to `magpie plugin add`.
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -89,6 +89,7 @@ function candidates() {
   };
 
   push(process.env.DEEPTUTOR_HOME, 'DEEPTUTOR_HOME');
+  push(desktopHome(), 'Open DeepTutor desktop app');
   push(process.cwd(), 'current directory');
 
   const bin = findBinary();
@@ -164,6 +165,14 @@ function scanForDistInfo(root) {
 }
 
 function detectVersion(bin, home) {
+  if (home) {
+    try {
+      const v = JSON.parse(readFileSync(path.join(home, '..', 'active.json'), 'utf8')).coreVersion;
+      if (/^\d+\.\d+\.\d+$/.test(v)) return { version: v, parts: v.split('.').map(Number), source: 'Open DeepTutor active.json' };
+    } catch {
+      /* not the desktop app */
+    }
+  }
   if (bin) {
     try {
       const raw = execFileSync(bin, ['--version'], { encoding: 'utf8', timeout: 15000, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -257,6 +266,9 @@ function main() {
   const mcp = mcpConfigPath(doctorEnv);
   const bridgeInfo = inspectBridge(bridge);
   const mcpInfo = inspectMcp(mcp);
+  const link = homeLinkPath();
+  let linkTarget = null;
+  try { linkTarget = realpathSync(link); } catch { /* made by the plugin host on load */ }
 
   let verdict = 'ready';
   const problems = [];
@@ -265,7 +277,6 @@ function main() {
     if (!chosen.catalogInfo?.ok) problems.push(`model_catalog.json missing or invalid: ${chosen.catalogInfo?.reason ?? 'not found'}`);
     if (!version) problems.push('could not determine the DeepTutor version (run `deeptutor --version`)');
     else if (!versionOk(version.parts)) problems.push(`DeepTutor ${version.version} < 1.7.0: detected, but not take-over-able`);
-    if (!bin) problems.push('`deeptutor` is not on PATH, so Magpie will report the agent as not detected');
     if (chosen) {
       // The plugin host creates the bridge and mcp.json on first load. A missing
       // file is normal before installation; an unreadable existing one is not.
@@ -294,6 +305,7 @@ function main() {
       statePath: statePath(doctorEnv),
       syncedPrefix: MCP_SERVER_PREFIX,
     },
+    homeLink: { path: link, target: linkTarget },
     suggested: chosen ? `DEEPTUTOR_HOME=${chosen.path}` : null,
   };
 
@@ -313,6 +325,7 @@ function main() {
       const c = chosen.catalogInfo;
       console.log(`  services.llm  : ${c.profiles} profile(s), active=${c.activeProfileId ?? 'null'}/${c.activeModelId ?? 'null'}`);
     }
+    console.log('  home link     :', `${link} -> ${linkTarget ?? '(made when Magpie loads the plugin)'}`);
     console.log('  MCP bridge    :', bridge);
     console.log('  MCP registry  :', mcp);
     if (bridgeInfo.ok) console.log(`  Library MCP   : ${bridgeInfo.servers} selected`);

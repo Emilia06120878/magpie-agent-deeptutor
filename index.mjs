@@ -7,6 +7,8 @@
 
 import fs from 'node:fs';
 import {
+  deeptutorHome,
+  linkHome,
   mcpBridgePath,
   mcpConfigPath,
   readJSON,
@@ -52,12 +54,15 @@ function watchBridge(env) {
 }
 
 function installation(env) {
+  // Before anything else: the Agents page detects and writes DeepTutor through this link.
+  const home = linkHome(env);
+  if (!home.ok) console.error('[magpie-agent-deeptutor] home link:', home.reason);
   const bridgeFile = mcpBridgePath(env);
   const mcpFile = mcpConfigPath(env);
   const bridge = { created: ensureBridgeFile(bridgeFile), path: bridgeFile };
   const mcp = syncBridge(env);
   watchBridge(env);
-  return { deeptutorHome: env.DEEPTUTOR_HOME || null, mcpFile: mcpFile || null, bridge, mcp };
+  return { deeptutorHome: deeptutorHome(env) || null, home, mcpFile: mcpFile || null, bridge, mcp };
 }
 
 async function runPlugin(input, options, env = process.env) {

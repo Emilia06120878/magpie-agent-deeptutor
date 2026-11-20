@@ -5,7 +5,8 @@
 // an agent and compute the keys Magpie should write into DeepTutor's config.
 //
 // What it writes: the live LLM route of DeepTutor, i.e. the `services.llm`
-// section of `<DEEPTUTOR_HOME>/data/user/settings/model_catalog.json`.
+// section of `<home>/data/user/settings/model_catalog.json`, reached through
+// the `~/.config/magpie/deeptutor-home` link that index.mjs maintains.
 // (`setup.json` is only the input file for `deeptutor config apply`; editing it
 // has no effect on a running DeepTutor — see docs/deeptutor-config.md.)
 //
@@ -58,18 +59,17 @@ export const agent = {
   id: 'deeptutor',
   name: 'DeepTutor',
   icon: ICON,
-  // DeepTutor's launcher puts `deeptutor` on PATH; that is how Magpie decides
-  // whether the agent is installed. Nothing is created just to be detected.
-  bin: 'deeptutor',
-  // The config dir DeepTutor uses when DEEPTUTOR_HOME is set (its own launcher
-  // sets it). Magpie expands $DEEPTUTOR_HOME before touching the file.
-  dir: '$DEEPTUTOR_HOME',
-  config: '$DEEPTUTOR_HOME/data/user/settings/model_catalog.json',
+  // A link the plugin host (index.mjs) points at the real DeepTutor home:
+  // $DEEPTUTOR_HOME for the CLI, or Open DeepTutor's data folder for the
+  // desktop app. It exists only when DeepTutor does, which is how Magpie
+  // decides the agent is installed; Magpie writes through it.
+  dir: '~/.config/magpie/deeptutor-home',
+  config: '~/.config/magpie/deeptutor-home/data/user/settings/model_catalog.json',
   format: 'json',
   // Dotted path inside model_catalog.json that holds the selected model id.
   model: 'services.llm.active_model_id',
   notice:
-    'DeepTutor resolves its LLM route when a chat starts: start a new chat (or restart `deeptutor serve`) to use the new model.',
+    'DeepTutor resolves its LLM route when a chat starts: start a new chat (or restart Open DeepTutor / `deeptutor serve`) to use the new model.',
   library: {
     // Magpie writes the Library's MCP picks here in Claude's object shape.
     // index.mjs translates the bridge into DeepTutor's `servers` object.
