@@ -21,7 +21,7 @@ DeepTutor's deployment-wide MCP client registry is a different object and lives
 inside the DeepTutor runtime home:
 
 ```text
-$DEEPTUTOR_HOME/data/user/settings/mcp.json
+<DeepTutor home>/data/user/settings/mcp.json
 ```
 
 ```json
@@ -64,7 +64,7 @@ therefore declares a Magpie-owned bridge and translates it in its Bun runtime:
 Magpie Library (assign MCP servers to DeepTutor)
   → ~/.config/magpie/deeptutor-mcp-bridge.json       (mcpServers, Claude format)
   → index.mjs watches the bridge
-  → $DEEPTUTOR_HOME/data/user/settings/mcp.json      (servers, DeepTutor format)
+  → <DeepTutor home>/data/user/settings/mcp.json      (servers, DeepTutor format)
 ```
 
 ## Translation rules
@@ -94,14 +94,10 @@ that DeepTutor owns on a synced entry (for example `tool_timeout`,
 `catalog_entry`) are also preserved when the same Library entry is rewritten.
 Unselecting an MCP server in the Library removes only its owned entry.
 
-`DEEPTUTOR_HOME` must be set in Magpie's process environment, not just in the
-terminal or DeepTutor's own launcher. When it is not, the plugin host refuses to
-sync instead of writing a root-relative path. This is the same environment
-variable the existing model-catalog config uses. On Windows, set a user-level
-environment variable and restart Magpie (and the desktop app, if it launches
-Magpie) before installing the plugin; `tools/doctor.mjs --json` can find an
-installation through the `deeptutor` binary even when Magpie will not inherit
-that setting.
+The MCP registry is resolved the same way as the model catalog: `$DEEPTUTOR_HOME`
+when set, otherwise Open DeepTutor's data folder. When neither is found the plugin
+host refuses to sync instead of writing a root-relative path. `tools/doctor.mjs --json`
+prints the home it found and the link.
 
 ## Live reload
 

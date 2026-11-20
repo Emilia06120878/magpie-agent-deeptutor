@@ -3,7 +3,7 @@
 # DeepTutor · Magpie Agent
 
 Lets DeepTutor use every model and routing group configured in Magpie, and syncs MCP servers assigned to DeepTutor in Magpie's Library. Magpie's Agent page does not know DeepTutor by default; once this plugin is installed it appears in the list.
-Supports **Windows / macOS / Linux**, target **DeepTutor ≥ 1.7.0**.
+Supports the **Open DeepTutor desktop app** (macOS / Windows) and the **CLI** (Windows / macOS / Linux), target **DeepTutor ≥ 1.7.0**.
 
 ---
 
@@ -14,6 +14,7 @@ Supports **Windows / macOS / Linux**, target **DeepTutor ≥ 1.7.0**.
 - **Restored on disconnect**: original values are backed up per key, and disconnecting or uninstalling restores the configuration as it was before, leaving existing profiles intact.
 - **Library MCP servers**: assign MCP servers to DeepTutor in Magpie's Library; the plugin translates them into DeepTutor's `mcp.json` without overwriting servers you added yourself.
 - **Nothing else touched**: model sync leaves `embedding`, `search` and `setup.json` alone; MCP sync writes only `servers` in `mcp.json`.
+- **Open DeepTutor desktop app**: no `DEEPTUTOR_HOME` required. On load the plugin links `~/.config/magpie/deeptutor-home` to the desktop data folder (or `$DEEPTUTOR_HOME` for the CLI). Magpie detects and writes the real `model_catalog.json` through that link; disconnect restore stays Magpie's own.
 - **Cross-platform**: one set of paths and commands across Windows, macOS and Linux.
 
 ---
@@ -61,7 +62,7 @@ Or with the Magpie CLI: `magpie plugin add github:Emilia06120878/magpie-agent-de
 4. **Switch models in DeepTutor**: open DeepTutor's own settings; the `Magpie` profile already lists every model.
 5. **Assign MCP servers**: Magpie → Library → MCP, and assign the servers you need to **DeepTutor**; the plugin syncs them into DeepTutor's MCP registry.
 
-> DeepTutor resolves its model route when a chat starts, so a new chat is enough. It reloads MCP connections at startup or when its settings API saves a server. For a long-lived `deeptutor serve` process, restarting once is the reliable way to apply both model and MCP changes. The plugin neither starts nor stops that service.
+> DeepTutor resolves its model route when a chat starts, so a new chat is enough. Restart Open DeepTutor for the desktop app, or `deeptutor serve` for a long-lived CLI process. MCP connections reload at startup or when settings are saved. The plugin neither starts nor stops that service.
 
 ---
 
@@ -83,15 +84,19 @@ Or with the Magpie CLI: `magpie plugin add github:Emilia06120878/magpie-agent-de
 ## Architecture
 
 ```text
+index.mjs on load
+    │  $DEEPTUTOR_HOME, else Open DeepTutor's data folder
+    ▼
+~/.config/magpie/deeptutor-home  →  the real workspace
+
 Magpie Agent page
     │  model selected
     ▼
 Magpie agent plugin deeptutor.agent.mjs
     │  receives the gateway and the model list
     ▼
-writes three key paths
+writes three key paths (Magpie follows the link to the real file)
     ~/.config/magpie/deeptutor-home/data/user/settings/model_catalog.json
-      (a link to $DEEPTUTOR_HOME or the desktop workspace)
       services.llm.profiles[]          ← every model Magpie provides
       services.llm.active_profile_id   ← llm-profile-magpie
       services.llm.active_model_id     ← the model selected in Magpie
@@ -152,8 +157,8 @@ The resulting `services.llm` structure (abridged):
 - When DeepTutor is not found (no `DEEPTUTOR_HOME`, desktop app never run) no link is made: the Agents page shows it as not detected and nothing is written.
 - The plugin only replaces a link it can recognise as a link; if `~/.config/magpie/deeptutor-home` is a real folder it is left alone.
 - DeepTutor 1.7.0 or newer is required. On older versions the agent appears in the list but cannot be taken over, and `tools/doctor.mjs` reports the reason.
-- A model switch takes effect on the next chat; for a long-lived `deeptutor serve` process, restarting once is safer.
-- DeepTutor does not watch `mcp.json`. After Library MCP assignments change, restart `deeptutor serve` to refresh live MCP connections.
+- A model switch takes effect on the next chat; restart Open DeepTutor on the desktop app, or `deeptutor serve` for a long-lived CLI process.
+- DeepTutor does not watch `mcp.json`. After Library MCP assignments change, restart the desktop app or `deeptutor serve` to refresh live MCP connections.
 
 ---
 
@@ -173,9 +178,13 @@ Drop `[::1]` from `NO_PROXY` and keep `::1`:
 NO_PROXY=10.69.24.25,198.18.0.1,.local,localhost,127.0.0.1,::1
 ```
 
+### DeepTutor does not appear in Magpie
+
+Open the desktop app once so `model_catalog.json` exists, or set `DEEPTUTOR_HOME` on Magpie's process. Then refresh the Agents page (or wait up to about 30 seconds). `node tools/doctor.mjs` prints the home it found and the link.
+
 ### A model switch does not take effect
 
-DeepTutor resolves its model route when a chat starts. A new chat is enough; for a long-lived `deeptutor serve` process, restarting once is safer.
+DeepTutor resolves its model route when a chat starts. A new chat is enough; restart Open DeepTutor on the desktop app, or `deeptutor serve` for a long-lived CLI process.
 
 ### The model list is empty after takeover
 
@@ -190,9 +199,9 @@ Run `node tools/doctor.mjs --json` and check the bridge and `mcp.json` counts, a
 ## Repository layout
 
 ```text
-index.mjs                     Bun plugin host: bridge file, watcher and MCP sync
+index.mjs                     Bun plugin host: home link plus MCP sync
 deeptutor.agent.mjs           moejs Agent descriptor and connect()
-lib/constants.mjs             paths, env expansion and atomic JSON writes
+lib/constants.mjs             paths, desktop discovery, home link and atomic JSON writes
 lib/mcp-bridge.mjs            claude mcpServers → DeepTutor servers translation
 package.json                  package metadata and the Magpie declaration
 install.sh / install.ps1      one-line installer (macOS/Linux · Windows)
