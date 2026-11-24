@@ -10,4 +10,4 @@ Thumbs.db
 test/.tmp/
 
 # empty runtime log tree some DeepTutor commands make in the package folder
-data/
+/data/

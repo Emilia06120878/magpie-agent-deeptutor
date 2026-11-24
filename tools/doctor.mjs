@@ -5,15 +5,16 @@
 // filesystem or the environment. Everything that needs to look at the machine happens
 // here, before you install the plugin:
 //
-//   1. environment route  — DEEPTUTOR_HOME
-//   2. candidate paths    — common install locations + the dir of the `deeptutor` binary
-//   3. manual route       — --home <path>
+//   1. desktop route      — the OS-specific Open DeepTutor workspace
+//   2. environment route  — DEEPTUTOR_HOME
+//   3. candidate paths    — common locations + the dir of the `deeptutor` binary
+//   4. manual route       — --home <path> (always wins)
 //
 // It also reports the Library MCP bridge and DeepTutor's live mcp.json.
 //
 // Usage:
 //   node tools/doctor.mjs
-//   node tools/doctor.mjs --home "E:\\DeepTutor\\workspace"
+//   node tools/doctor.mjs --home <path>
 //   node tools/doctor.mjs --json
 //
 // Exit codes: 0 ready, 1 not found, 2 found but not take-over-able (version/paths).
@@ -25,12 +26,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { MCP_SERVER_PREFIX, mcpBridgePath, mcpConfigPath, statePath } from '../lib/constants.mjs';
+import { catalogOf, desktopWorkspace } from '../lib/home-paths.mjs';
 
 // tools/ lives one level below the package root — that is what you hand to `magpie plugin add`.
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const MIN_VERSION = [1, 7, 0];
-const SETTINGS = ['data', 'user', 'settings', 'model_catalog.json'];
 
 function parseArgs(argv) {
   const out = { json: false, home: null, quiet: false };
@@ -54,10 +55,6 @@ function expand(p) {
   if (out === '~') out = homedir();
   else if (out.startsWith('~/') || out.startsWith('~\\')) out = path.join(homedir(), out.slice(2));
   return out;
-}
-
-function catalogOf(home) {
-  return path.join(home, ...SETTINGS);
 }
 
 function looksLikeHome(dir) {
@@ -88,6 +85,11 @@ function candidates() {
     if (!out.some((c) => c.path === v)) out.push({ path: v, why });
   };
 
+  // The POSIX installer's explicit override has the same meaning here.
+  push(process.env.MAGPIE_DEEPTUTOR_HOME, 'MAGPIE_DEEPTUTOR_HOME');
+  // The managed desktop app is preferred when both editions are installed.
+  // These locations come from the OS/current user, never from an app install path.
+  push(desktopWorkspace(), 'Open DeepTutor desktop workspace');
   push(process.env.DEEPTUTOR_HOME, 'DEEPTUTOR_HOME');
   push(process.cwd(), 'current directory');
 
@@ -251,7 +253,13 @@ function main() {
   if (chosen && !chosen.catalogInfo) chosen.catalogInfo = inspectCatalog(chosen.catalog);
 
   const bin = findBinary();
-  const version = detectVersion(bin, chosen?.path);
+  const desktopHome = desktopWorkspace();
+  const desktop = Boolean(
+    chosen && desktopHome && path.relative(path.resolve(expand(desktopHome)), chosen.path) === '',
+  );
+  // A desktop install may also have an unrelated legacy CLI on PATH. Do not
+  // attribute that CLI's version to the desktop workspace or require the CLI.
+  const version = desktop ? null : detectVersion(bin, chosen?.path);
   const doctorEnv = chosen ? { ...process.env, DEEPTUTOR_HOME: chosen.path } : process.env;
   const bridge = mcpBridgePath(doctorEnv);
   const mcp = mcpConfigPath(doctorEnv);
@@ -263,9 +271,11 @@ function main() {
   if (!chosen) verdict = 'not-found';
   else {
     if (!chosen.catalogInfo?.ok) problems.push(`model_catalog.json missing or invalid: ${chosen.catalogInfo?.reason ?? 'not found'}`);
-    if (!version) problems.push('could not determine the DeepTutor version (run `deeptutor --version`)');
-    else if (!versionOk(version.parts)) problems.push(`DeepTutor ${version.version} < 1.7.0: detected, but not take-over-able`);
-    if (!bin) problems.push('`deeptutor` is not on PATH, so Magpie will report the agent as not detected');
+    if (!desktop) {
+      if (!version) problems.push('could not determine the DeepTutor version (run `deeptutor --version`)');
+      else if (!versionOk(version.parts)) problems.push(`DeepTutor ${version.version} < 1.7.0: detected, but not take-over-able`);
+      if (!bin) problems.push('`deeptutor` is not on PATH; run install.ps1/install.sh to configure DEEPTUTOR_HOME');
+    }
     if (chosen) {
       // The plugin host creates the bridge and mcp.json on first load. A missing
       // file is normal before installation; an unreadable existing one is not.
@@ -282,9 +292,10 @@ function main() {
     foundBy: chosen?.why ?? null,
     catalogPath: chosen?.catalog ?? null,
     catalog: chosen?.catalogInfo ?? null,
-    binary: bin,
+    binary: desktop ? null : bin,
+    desktop,
     version,
-    minVersion: MIN_VERSION.join('.'),
+    minVersion: desktop ? null : MIN_VERSION.join('.'),
     allFound: found.map((f) => ({ path: f.path, why: f.why })),
     mcp: {
       bridgePath: bridge,
@@ -304,8 +315,9 @@ function main() {
 
   if (!args.quiet) {
     console.log('DeepTutor preflight');
-    console.log('  binary        :', bin ?? '(not on PATH)');
-    console.log('  version       :', version ? `${version.version} (${version.source})` : 'unknown');
+    console.log('  runtime       :', desktop ? 'Open DeepTutor desktop (managed)' : 'DeepTutor CLI');
+    console.log('  binary        :', desktop ? '(not required)' : bin ?? '(not on PATH)');
+    console.log('  version       :', desktop ? 'managed by the desktop app' : version ? `${version.version} (${version.source})` : 'unknown');
     console.log('  DEEPTUTOR_HOME:', chosen?.path ?? '(not found)');
     if (chosen) console.log('  found by      :', chosen.why);
     if (chosen) console.log('  catalog       :', chosen.catalog);

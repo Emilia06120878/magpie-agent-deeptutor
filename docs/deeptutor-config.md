@@ -1,7 +1,8 @@
 # Where DeepTutor actually keeps its LLM configuration
 
-Verified against DeepTutor **1.7.0** (`E:\DeepTutor\uv-tools\deeptutor\Lib\site-packages\deeptutor-1.7.0.dist-info`)
-by reading the Python sources and by running `deeptutor config show` / `config apply`.
+Verified against DeepTutor **1.7.0** by reading the Python sources and by running
+`deeptutor config show` / `config apply`. Desktop discovery was also checked against
+Open DeepTutor's managed Windows workspace.
 
 ## TL;DR
 
@@ -16,7 +17,18 @@ Editing `setup.json` does **not** change a running DeepTutor. A grep for `setup.
 across the whole installed package returns exactly one hit — the hint string
 `"next_step": "deeptutor config apply setup.json"` in `deeptutor_cli/init_cmd.py:499`.
 
-## How `<home>` is resolved
+## Open DeepTutor desktop workspace
+
+The desktop app does not use its application install folder as the writable data
+folder. Its workspace is derived from the operating system and current user:
+
+- Windows: `%LOCALAPPDATA%\Open DeepTutor\workspace`
+- macOS: `~/Library/Application Support/Open DeepTutor/workspace`
+
+The installer discovers these locations and exports `DEEPTUTOR_HOME` for Magpie.
+No user name, drive letter or application install path is built into the plugin.
+
+## How the legacy CLI `<home>` is resolved
 
 `deeptutor/runtime/home.py`:
 
@@ -40,11 +52,11 @@ There is no `~/.deeptutor` convention anywhere in the package.
 DeepTutor's own launcher (`deeptutor.cmd`) sets `DEEPTUTOR_HOME` and `cd`s into it:
 
 ```bat
-set "DEEPTUTOR_HOME=E:\DeepTutor\workspace"
-set "DEEPTUTOR_LOCAL_BIN=E:\DeepTutor\bin\deeptutor.exe"
-set "PATH=E:\DeepTutor\bin;%PATH%"
+set "DEEPTUTOR_HOME=%USERPROFILE%\DeepTutor\workspace"
+set "DEEPTUTOR_LOCAL_BIN=%USERPROFILE%\DeepTutor\bin"
+set "PATH=%DEEPTUTOR_LOCAL_BIN%;%PATH%"
 cd /d "%DEEPTUTOR_HOME%"
-"E:\DeepTutor\bin\deeptutor.exe" %*
+"%DEEPTUTOR_LOCAL_BIN%\deeptutor.exe" %*
 ```
 
 So `$DEEPTUTOR_HOME/data/user/settings/model_catalog.json` is the correct, portable

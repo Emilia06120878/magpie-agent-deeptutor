@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.3.0 — 2026-11-24
+
+**Open DeepTutor desktop discovery**
+
+- Added generic desktop workspace discovery for Windows (`%LOCALAPPDATA%`) and
+  macOS (the current user's `Library/Application Support`). No application
+  install directory, user name or drive letter is hard-coded.
+- `install.ps1` and `install.sh` now select an existing workspace, configure
+  `DEEPTUTOR_HOME` for Magpie, and install the plugin. Desktop workspaces are
+  preferred when both desktop and legacy CLI editions are present; explicit
+  overrides remain available. Check-only modes allow a side-effect-free dry run.
+- Windows persists the variable for the current user. macOS applies it through
+  `launchctl` and a per-user LaunchAgent so restarted GUI processes can inherit it.
+- `tools/doctor.mjs` recognizes the managed desktop runtime and no longer demands
+  an unrelated legacy CLI binary or version for that workspace. `--home` remains
+  the highest-priority override.
+- Expanded unit/integration tests cover desktop preference, explicit overrides,
+  read-only discovery, installer check-only behavior and machine-specific path
+  regression checks. Both READMEs document detection, restart and troubleshooting.
+- The model catalog and Library MCP sync formats are unchanged from 0.2.0.
+
 ## 0.2.0 — 2026-11-08
 
 **Library MCP support**

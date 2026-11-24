@@ -58,11 +58,11 @@ export const agent = {
   id: 'deeptutor',
   name: 'DeepTutor',
   icon: ICON,
-  // DeepTutor's launcher puts `deeptutor` on PATH; that is how Magpie decides
-  // whether the agent is installed. Nothing is created just to be detected.
+  // Magpie accepts either this legacy CLI on PATH or the workspace below.
+  // Nothing is created just to be detected.
   bin: 'deeptutor',
-  // The config dir DeepTutor uses when DEEPTUTOR_HOME is set (its own launcher
-  // sets it). Magpie expands $DEEPTUTOR_HOME before touching the file.
+  // The desktop installers set DEEPTUTOR_HOME from OS-standard user directories;
+  // the legacy launcher sets it too. Magpie expands it before touching the file.
   dir: '$DEEPTUTOR_HOME',
   config: '$DEEPTUTOR_HOME/data/user/settings/model_catalog.json',
   format: 'json',
