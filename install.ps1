@@ -27,14 +27,19 @@ function Resolve-DeepTutorHome {
         return $explicit
     }
 
-    # Prefer the managed desktop workspace when both old and new editions exist.
-    # LOCALAPPDATA makes this rule independent of user name, drive and app location.
+    # An existing explicit home is authoritative, matching the plugin host.
+    if (Test-DeepTutorHome $env:DEEPTUTOR_HOME) {
+        return $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($env:DEEPTUTOR_HOME)
+    }
+
+    # Otherwise use the managed desktop workspace. LOCALAPPDATA makes this rule
+    # independent of user name, drive and application install location.
     if ($env:LOCALAPPDATA) {
         $desktop = Join-Path $env:LOCALAPPDATA 'Open DeepTutor\workspace'
         if (Test-DeepTutorHome $desktop) { return $desktop }
     }
 
-    $candidates = @($env:DEEPTUTOR_HOME, (Get-Location).Path)
+    $candidates = @((Get-Location).Path)
     if ($env:USERPROFILE) {
         $candidates += @(
             (Join-Path $env:USERPROFILE '.deeptutor'),
@@ -79,11 +84,13 @@ function Find-Magpie {
 }
 
 $selectedHome = Resolve-DeepTutorHome
+$desktopHome = if ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA 'Open DeepTutor\workspace' } else { $null }
+$isDesktopHome = $desktopHome -and ($selectedHome.TrimEnd('\') -ieq $desktopHome.TrimEnd('\'))
 Write-Host "DeepTutor workspace: $selectedHome"
 if ($CheckOnly) { exit 0 }
 
-# The moejs descriptor expands this variable. Set it for this installer and for
-# future Magpie GUI/CLI processes; never infer it from a machine-specific path.
+# The plugin host reads this variable while targeting its fixed home link.
+# Future Magpie GUI/CLI processes also need it for explicit CLI/custom layouts.
 $env:DEEPTUTOR_HOME = $selectedHome
 
 $magpie = Find-Magpie
@@ -99,12 +106,16 @@ if ($null -ne $code -and $code -ne 0) {
     throw "magpie plugin add failed (exit $code)"
 }
 
-# Persist only after a successful install; the process variable above is enough
-# for the plugin host while `magpie plugin add` is running.
-[Environment]::SetEnvironmentVariable('DEEPTUTOR_HOME', $selectedHome, 'User')
-
 Write-Host ''
-Write-Host 'Installed. Restart Magpie so its desktop process inherits DEEPTUTOR_HOME.'
+if ($isDesktopHome) {
+    # The fixed home link discovers this standard workspace on every load.
+    # Do not leave a persistent variable that could later override a reinstall.
+    Write-Host 'Installed. Desktop discovery uses the home link; no environment variable or restart is required.'
+} else {
+    # Only explicit CLI/custom layouts need persistence for later GUI processes.
+    [Environment]::SetEnvironmentVariable('DEEPTUTOR_HOME', $selectedHome, 'User')
+    Write-Host 'Installed. Restart Magpie so its desktop process inherits DEEPTUTOR_HOME.'
+}
 Write-Host 'Then:'
 Write-Host '  1. Magpie -> Agents -> DeepTutor -> pick a model'
 Write-Host '  2. DeepTutor -> Settings -> model list -> the Magpie profile'

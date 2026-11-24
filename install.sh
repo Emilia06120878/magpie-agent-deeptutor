@@ -18,12 +18,12 @@ if [ "$(uname -s)" = 'Darwin' ]; then
 fi
 
 SELECTED_HOME=''
-# An explicit override wins. Otherwise prefer the managed desktop workspace when
-# both editions exist; every candidate is derived from the current user/system.
+# Explicit overrides win, then an existing DEEPTUTOR_HOME, then the managed
+# desktop workspace. Every candidate is derived from the current user/system.
 for candidate in \
   "${MAGPIE_DEEPTUTOR_HOME:-}" \
-  "$DESKTOP_HOME" \
   "${DEEPTUTOR_HOME:-}" \
+  "$DESKTOP_HOME" \
   "$PWD" \
   "$HOME/.deeptutor" \
   "$HOME/DeepTutor/workspace" \
@@ -43,6 +43,10 @@ do
 done
 
 [ -n "$SELECTED_HOME" ] || die 'DeepTutor was not found. Open it once, or set MAGPIE_DEEPTUTOR_HOME to its workspace.'
+IS_DESKTOP_HOME=0
+if [ -n "$DESKTOP_HOME" ] && [ "$SELECTED_HOME" = "$DESKTOP_HOME" ]; then
+  IS_DESKTOP_HOME=1
+fi
 say "DeepTutor workspace: $SELECTED_HOME"
 if [ "${CHECK_ONLY:-0}" = '1' ]; then exit 0; fi
 export DEEPTUTOR_HOME="$SELECTED_HOME"
@@ -101,17 +105,20 @@ say "magpie: $MAGPIE"
 say "adding $REPO"
 "$MAGPIE" plugin add "$REPO" || die "magpie plugin add failed"
 
-# Persist only after a successful install; the exported process variable is
-# enough for the plugin host while `magpie plugin add` is running.
-if [ "$(uname -s)" = 'Darwin' ]; then
-  persist_macos_environment
-else
-  say 'For later terminal sessions, add this to your shell profile:'
-  say "  export DEEPTUTOR_HOME=\"$SELECTED_HOME\""
-fi
-
 say ""
-say 'Installed. Restart Magpie so its desktop process inherits DEEPTUTOR_HOME.'
+if [ "$IS_DESKTOP_HOME" -eq 1 ]; then
+  # The fixed home link rediscovers the standard desktop workspace every load.
+  say 'Installed. Desktop discovery uses the home link; no environment variable or restart is required.'
+else
+  # Persist only after a successful install and only for explicit CLI/custom homes.
+  if [ "$(uname -s)" = 'Darwin' ]; then
+    persist_macos_environment
+  else
+    say 'For later terminal sessions, add this to your shell profile:'
+    say "  export DEEPTUTOR_HOME=\"$SELECTED_HOME\""
+  fi
+  say 'Installed. Restart Magpie so its desktop process inherits DEEPTUTOR_HOME.'
+fi
 say 'Then:'
 say '  1. Magpie -> Agents -> DeepTutor -> pick a model'
 say '  2. DeepTutor -> Settings -> model list -> the Magpie profile'

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0 — 2026-11-25
+
+**Home-link desktop integration**
+
+- Merged and adapted [PR #1](https://github.com/Emilia06120878/magpie-agent-deeptutor/pull/1) from **@zonsunny**, preserving the contributor's original commits.
+- The plugin host now points the fixed `~/.config/magpie/deeptutor-home` link at an explicit `DEEPTUTOR_HOME` or the standard Open DeepTutor desktop workspace. The agent descriptor always uses that link, so direct installation needs no automatic user-environment persistence.
+- Magpie still performs its own model-catalog merge, backup and disconnect restore, now through the link. MCP discovery uses the same selected workspace.
+- Retained the generic installers, managed-desktop doctor checks and expanded tests from 0.3.x. Added stale-link cleanup, real-directory protection and checks that missing or invalid workspaces are not created.
+- The previous environment-persisting implementation remains available on the `archive/desktop-env-0.3.1` branch. Model routing and MCP formats are unchanged.
+
 ## 0.3.1 — 2026-11-24
 
 **Automatic desktop configuration for direct plugin installs**

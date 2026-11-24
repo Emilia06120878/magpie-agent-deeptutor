@@ -67,13 +67,14 @@ const gateway = { url: 'http://127.0.0.1:3425', v1: 'http://127.0.0.1:3425/v1', 
 const model = { id: 'group/workbuddyqoderlobster-kimi-k3.1-pro', name: 'WorkbuddyQoderLobster-Kimi K3.1 Pro' };
 
 console.log('agent declaration');
-test('id/name/bin are set', () => {
+test('id/name are set; detection is by the home link, not a PATH binary', () => {
   assert.equal(agent.id, 'deeptutor');
   assert.equal(agent.name, 'DeepTutor');
-  assert.equal(agent.bin, 'deeptutor');
+  assert.equal(agent.bin, undefined);
+  assert.equal(agent.dir, '~/.config/magpie/deeptutor-home');
 });
 test('config points at the live catalog, not setup.json', () => {
-  assert.match(agent.config, /\$DEEPTUTOR_HOME\/data\/user\/settings\/model_catalog\.json$/);
+  assert.equal(agent.config, `${agent.dir}/data/user/settings/model_catalog.json`);
   assert.doesNotMatch(agent.config, /setup\.json/);
   assert.equal(agent.format, 'json');
 });

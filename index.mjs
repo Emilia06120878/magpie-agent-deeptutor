@@ -1,13 +1,15 @@
 // Magpie plugin-host entry for the DeepTutor agent.
 //
-// The moejs agent descriptor cannot touch the filesystem. After a direct
-// plugin add this host discovers an unconfigured desktop workspace and prepares
-// DEEPTUTOR_HOME for the next Magpie process. It also keeps DeepTutor's
-// deployment-wide mcp.json in sync with Magpie's Claude-shaped Library bridge
-// while running. It opens no network listeners.
+// The moejs agent descriptor cannot touch the filesystem. This host links its
+// fixed deeptutor-home path to the real workspace so Magpie can detect and
+// write it without an environment variable. Magpie writes Library MCP picks to
+// a Claude-shaped bridge; this module syncs that bridge to DeepTutor's mcp.json
+// while running. It opens no network listeners and persists no user environment.
 
 import fs from 'node:fs';
 import {
+  deeptutorHome,
+  linkHome,
   mcpBridgePath,
   mcpConfigPath,
   readJSON,
@@ -18,7 +20,6 @@ import {
   ensureBridgeFile,
   syncMcpBridge,
 } from './lib/mcp-bridge.mjs';
-import { configureDesktopEnvironment } from './lib/desktop-environment.mjs';
 
 let bridgeWatcher;
 
@@ -54,24 +55,23 @@ function watchBridge(env) {
 }
 
 function installation(env) {
+  // Before anything else: the Agents page detects and writes DeepTutor through this link.
+  const home = linkHome(env);
+  if (!home.ok) console.error('[magpie-agent-deeptutor] home link:', home.reason);
   const bridgeFile = mcpBridgePath(env);
   const mcpFile = mcpConfigPath(env);
   const bridge = { created: ensureBridgeFile(bridgeFile), path: bridgeFile };
   const mcp = syncBridge(env);
   watchBridge(env);
-  return { deeptutorHome: env.DEEPTUTOR_HOME || null, mcpFile: mcpFile || null, bridge, mcp };
+  return { deeptutorHome: deeptutorHome(env) || null, home, mcpFile: mcpFile || null, bridge, mcp };
 }
 
-async function runPlugin(input, options, env = process.env, environmentOptions = {}) {
-  const environment = await configureDesktopEnvironment({ env, ...environmentOptions });
-  if (environment.error) {
-    console.error('[magpie-agent-deeptutor] desktop environment:', environment.error);
-  }
+async function runPlugin(input, options, env = process.env) {
   const result = installation(env);
   const file = statePath(env);
   writeJSONIfChanged(file, {
     ...(readJSON(file, {}) || {}),
-    lastLoad: { ...result, environment },
+    lastLoad: result,
     lastLoadAt: new Date().toISOString(),
   });
   return {};

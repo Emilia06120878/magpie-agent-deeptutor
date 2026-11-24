@@ -25,12 +25,13 @@ folder. Its workspace is derived from the operating system and current user:
 - Windows: `%LOCALAPPDATA%\Open DeepTutor\workspace`
 - macOS: `~/Library/Application Support/Open DeepTutor/workspace`
 
-The plugin host and installer discover these locations and export `DEEPTUTOR_HOME`
-for Magpie. Direct `magpie plugin add` installation also persists the discovered
-value for future Windows users or macOS login sessions, while preserving an
-existing explicit value. Set `MAGPIE_DEEPTUTOR_NO_PERSIST=1` to opt out of
-persistence. No user name, drive letter or application install path is built into
-the plugin.
+The plugin host discovers these locations and points the fixed
+`~/.config/magpie/deeptutor-home` link at the real workspace. Direct
+`magpie plugin add` installation therefore needs no `DEEPTUTOR_HOME` persistence
+for the desktop app. An existing explicit `DEEPTUTOR_HOME` still wins for CLI or
+custom layouts. The optional installers can configure that variable for legacy
+setups. No user name, drive letter or application install path is built into the
+plugin.
 
 ## How the legacy CLI `<home>` is resolved
 
@@ -63,13 +64,12 @@ cd /d "%DEEPTUTOR_HOME%"
 "%DEEPTUTOR_LOCAL_BIN%\deeptutor.exe" %*
 ```
 
-So `$DEEPTUTOR_HOME/data/user/settings/model_catalog.json` is the correct, portable
-target for the plugin — on Windows, macOS and Linux alike, as long as `DEEPTUTOR_HOME`
-is set (which DeepTutor's launcher does).
+The catalog is still that file. Magpie cannot expand a per-machine home, so the plugin
+host links `~/.config/magpie/deeptutor-home` to `$DEEPTUTOR_HOME` (when set) or to Open
+DeepTutor's data folder, and the agent descriptor writes through the link.
 
-> If `DEEPTUTOR_HOME` is unset, Magpie expands `$DEEPTUTOR_HOME` to an **empty string**
-> and would end up writing `\data\user\settings\model_catalog.json` on Windows
-> (`/data/...` elsewhere). Always run `node tools/doctor.mjs` before installing.
+> When neither `$DEEPTUTOR_HOME` nor the desktop catalog exists, no link is made and
+> Magpie does not detect the agent. `node tools/doctor.mjs` prints the home it found.
 
 ## Shape of `services.llm`
 

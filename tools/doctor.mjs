@@ -5,8 +5,8 @@
 // filesystem or the environment. Everything that needs to look at the machine happens
 // here, before you install the plugin:
 //
-//   1. desktop route      — the OS-specific Open DeepTutor workspace
-//   2. environment route  — DEEPTUTOR_HOME
+//   1. environment route  — DEEPTUTOR_HOME, when explicitly configured
+//   2. desktop route      — the OS-specific Open DeepTutor workspace
 //   3. candidate paths    — common locations + the dir of the `deeptutor` binary
 //   4. manual route       — --home <path> (always wins)
 //
@@ -19,13 +19,13 @@
 //
 // Exit codes: 0 ready, 1 not found, 2 found but not take-over-able (version/paths).
 
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { homedir, platform } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { MCP_SERVER_PREFIX, mcpBridgePath, mcpConfigPath, statePath } from '../lib/constants.mjs';
+import { MCP_SERVER_PREFIX, homeLinkPath, mcpBridgePath, mcpConfigPath, statePath } from '../lib/constants.mjs';
 import { catalogOf, desktopWorkspace } from '../lib/home-paths.mjs';
 
 // tools/ lives one level below the package root — that is what you hand to `magpie plugin add`.
@@ -87,10 +87,10 @@ function candidates() {
 
   // The POSIX installer's explicit override has the same meaning here.
   push(process.env.MAGPIE_DEEPTUTOR_HOME, 'MAGPIE_DEEPTUTOR_HOME');
-  // The managed desktop app is preferred when both editions are installed.
-  // These locations come from the OS/current user, never from an app install path.
-  push(desktopWorkspace(), 'Open DeepTutor desktop workspace');
+  // An explicit home is authoritative, matching the plugin host. Otherwise use
+  // the standard desktop location derived from the OS and current user.
   push(process.env.DEEPTUTOR_HOME, 'DEEPTUTOR_HOME');
+  push(desktopWorkspace(), 'Open DeepTutor desktop workspace');
   push(process.cwd(), 'current directory');
 
   const bin = findBinary();
@@ -239,6 +239,25 @@ function inspectBridge(file) {
   }
 }
 
+function inspectHomeLink(file) {
+  const report = { path: file, status: 'missing', target: null, reason: null };
+  let stat;
+  try {
+    stat = lstatSync(file);
+  } catch (error) {
+    if (error.code === 'ENOENT') return report;
+    return { ...report, status: 'error', reason: error.message };
+  }
+  if (!stat.isSymbolicLink()) {
+    return { ...report, status: 'not-a-link', reason: 'a real file or directory occupies the plugin link path' };
+  }
+  try {
+    return { ...report, status: 'linked', target: realpathSync(file) };
+  } catch (error) {
+    return { ...report, status: 'dangling', reason: error.message };
+  }
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const found = [];
@@ -246,8 +265,14 @@ function main() {
     if (looksLikeHome(c.path)) found.push({ ...c, catalog: catalogOf(c.path), catalogInfo: inspectCatalog(catalogOf(c.path)) });
   }
 
-  const chosen = args.home
-    ? { path: path.resolve(expand(args.home)), why: '--home', catalog: catalogOf(path.resolve(expand(args.home))) }
+  const requestedHome = args.home || process.env.MAGPIE_DEEPTUTOR_HOME || process.env.DEEPTUTOR_HOME;
+  const requestedWhy = args.home
+    ? '--home'
+    : process.env.MAGPIE_DEEPTUTOR_HOME
+      ? 'MAGPIE_DEEPTUTOR_HOME'
+      : 'DEEPTUTOR_HOME';
+  const chosen = requestedHome
+    ? { path: path.resolve(expand(requestedHome)), why: requestedWhy, catalog: catalogOf(path.resolve(expand(requestedHome))) }
     : found[0] ?? null;
 
   if (chosen && !chosen.catalogInfo) chosen.catalogInfo = inspectCatalog(chosen.catalog);
@@ -265,6 +290,7 @@ function main() {
   const mcp = mcpConfigPath(doctorEnv);
   const bridgeInfo = inspectBridge(bridge);
   const mcpInfo = inspectMcp(mcp);
+  const homeLink = inspectHomeLink(homeLinkPath());
 
   let verdict = 'ready';
   const problems = [];
@@ -272,9 +298,27 @@ function main() {
   else {
     if (!chosen.catalogInfo?.ok) problems.push(`model_catalog.json missing or invalid: ${chosen.catalogInfo?.reason ?? 'not found'}`);
     if (!desktop) {
-      if (!version) problems.push('could not determine the DeepTutor version (run `deeptutor --version`)');
-      else if (!versionOk(version.parts)) problems.push(`DeepTutor ${version.version} < 1.7.0: detected, but not take-over-able`);
-      if (!bin) problems.push('`deeptutor` is not on PATH; run install.ps1/install.sh to configure DEEPTUTOR_HOME');
+      // The descriptor no longer needs a CLI on PATH. Check a version only
+      // when one is actually discoverable, and reject a known old runtime.
+      if (bin && !version) problems.push('could not determine the DeepTutor version (run `deeptutor --version`)');
+      else if (version && !versionOk(version.parts)) problems.push(`DeepTutor ${version.version} < 1.7.0: detected, but not take-over-able`);
+    }
+    if (homeLink.status === 'not-a-link' || homeLink.status === 'error') {
+      problems.push(`home link is not usable: ${homeLink.reason}`);
+    } else if (homeLink.status === 'linked') {
+      const actual = path.resolve(homeLink.target);
+      let expected = path.resolve(chosen.path);
+      try {
+        // The target is already realpath'd; resolve the chosen path the same
+        // way so a symlinked HOME (/tmp, /var, autofs) is not a false mismatch.
+        expected = realpathSync(chosen.path);
+      } catch {
+        // A missing workspace is reported separately; compare lexically.
+      }
+      const same = process.platform === 'win32'
+        ? actual.toLowerCase() === expected.toLowerCase()
+        : actual === expected;
+      if (!same) problems.push(`home link points to ${actual}, not the selected workspace ${expected}`);
     }
     if (chosen) {
       // The plugin host creates the bridge and mcp.json on first load. A missing
@@ -296,6 +340,7 @@ function main() {
     desktop,
     version,
     minVersion: desktop ? null : MIN_VERSION.join('.'),
+    homeLink,
     allFound: found.map((f) => ({ path: f.path, why: f.why })),
     mcp: {
       bridgePath: bridge,
@@ -319,6 +364,8 @@ function main() {
     console.log('  binary        :', desktop ? '(not required)' : bin ?? '(not on PATH)');
     console.log('  version       :', desktop ? 'managed by the desktop app' : version ? `${version.version} (${version.source})` : 'unknown');
     console.log('  DEEPTUTOR_HOME:', chosen?.path ?? '(not found)');
+    console.log('  home link     :', `${homeLink.path} [${homeLink.status}]${homeLink.target ? ` -> ${homeLink.target}` : ''}`);
+    if (homeLink.reason) console.log('                  ', homeLink.reason);
     if (chosen) console.log('  found by      :', chosen.why);
     if (chosen) console.log('  catalog       :', chosen.catalog);
     if (chosen?.catalogInfo?.ok) {

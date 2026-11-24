@@ -121,6 +121,14 @@ test('a missing DEEPTUTOR_HOME is reported rather than writing a root-relative f
   assert.match(result.reason, /DEEPTUTOR_HOME/);
 });
 
+test('an invalid explicit home has a distinct MCP diagnostic', () => {
+  const result = syncMcpBridge({
+    bridgeFile: '/does/not/matter', mcpFile: '', env: { DEEPTUTOR_HOME: '/missing/workspace' },
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /does not point to an existing workspace/);
+});
+
 test('malformed bridge or mcp.json is never overwritten', () => {
   const dir = tempDir();
   const bridgeFile = path.join(dir, 'bridge.json');
