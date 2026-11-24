@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.3.1 — 2026-11-24
+
+**Automatic desktop configuration for direct plugin installs**
+
+- Direct `magpie plugin add` installation now configures a standard Open
+  DeepTutor desktop workspace from the normal plugin
+  host, so running an external installer first is no longer required.
+- Discovery still requires an existing desktop `model_catalog.json` and uses only
+  standard Windows / macOS user data locations. No model catalog is created or
+  modified by workspace discovery.
+- Windows persists `DEEPTUTOR_HOME` for the current user; macOS uses `launchctl`
+  and the plugin's per-user LaunchAgent. Existing non-empty values are preserved,
+  and `MAGPIE_DEEPTUTOR_NO_PERSIST=1` provides a current-host-only opt-out.
+- Persistence errors are diagnostic and do not prevent the plugin host or MCP
+  bridge from loading. Both READMEs document direct installs, restart behavior,
+  explicit overrides and troubleshooting.
+- Added isolated tests for Windows and macOS discovery, persistence commands,
+  special-character paths, existing configuration, missing catalogs, opt-out and
+  failure fallback. Model routing and MCP sync formats are unchanged.
+
 ## 0.3.0 — 2026-11-24
 
 **Open DeepTutor desktop discovery**

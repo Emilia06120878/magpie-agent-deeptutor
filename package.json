@@ -1,6 +1,6 @@
 {
   "name": "magpie-agent-deeptutor",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Magpie agent plugin that puts DeepTutor on Magpie's Agent page, writes every Magpie model into DeepTutor's own model list, and syncs Library MCP servers",
   "type": "module",
   "private": true,
@@ -31,7 +31,7 @@
     "agent": "./deeptutor.agent.mjs"
   },
   "scripts": {
-    "test": "node --test test/agent.test.mjs test/detection.test.mjs test/home-paths.test.mjs test/mcp-bridge.test.mjs test/plugin-host.test.mjs && node test/run-tests.mjs",
+    "test": "node --test test/agent.test.mjs test/desktop-environment.test.mjs test/detection.test.mjs test/home-paths.test.mjs test/mcp-bridge.test.mjs test/plugin-host.test.mjs && node test/run-tests.mjs",
     "doctor": "node tools/doctor.mjs"
   },
   "engines": {

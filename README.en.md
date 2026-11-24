@@ -14,7 +14,7 @@ Supports the **Open DeepTutor desktop app (Windows / macOS)** and **DeepTutor CL
 - **Restored on disconnect**: original values are backed up per key, and disconnecting or uninstalling restores the configuration as it was before, leaving existing profiles intact.
 - **Library MCP servers**: assign MCP servers to DeepTutor in Magpie's Library; the plugin translates them into DeepTutor's `mcp.json` without overwriting servers you added yourself.
 - **Nothing else touched**: model sync leaves `embedding`, `search` and `setup.json` alone; MCP sync writes only `servers` in `mcp.json`.
-- **Desktop auto-detection**: the installer locates Open DeepTutor from standard OS data directories, without depending on a user name, drive letter, app install folder or legacy `deeptutor` command.
+- **Desktop auto-detection**: both direct plugin installation and the installer locate Open DeepTutor from standard OS data directories, without depending on a user name, drive letter, app install folder or legacy `deeptutor` command.
 
 ---
 
@@ -32,7 +32,7 @@ curl -fsSL https://raw.githubusercontent.com/Emilia06120878/magpie-agent-deeptut
 powershell -c "irm https://raw.githubusercontent.com/Emilia06120878/magpie-agent-deeptutor/main/install.ps1 | iex"
 ```
 
-**For the new desktop app, prefer the installer.** It discovers the standard data directory, configures `DEEPTUTOR_HOME` for Magpie, and only then installs the plugin. Windows stores it in the current user's environment; macOS uses `launchctl` and a per-user LaunchAgent. Restart Magpie afterwards so it inherits the environment.
+The installer discovers the standard data directory, configures `DEEPTUTOR_HOME` for Magpie, and then installs the plugin. It remains the recommended route when you need an explicit workspace override or a check-only dry run. Windows stores the value in the current user's environment; macOS uses `launchctl` and a per-user LaunchAgent. Restart Magpie afterwards so it inherits the environment.
 
 Or add the repository from Magpie → **Plugins**:
 
@@ -42,7 +42,7 @@ github:Emilia06120878/magpie-agent-deeptutor
 
 Or with the Magpie CLI: `magpie plugin add github:Emilia06120878/magpie-agent-deeptutor`
 
-> Adding the plugin directly does not run workspace discovery. If Magpie says “not detected”, use the installer above, or run the preflight check and configure `DEEPTUTOR_HOME` as described below.
+> Starting with 0.3.1, direct plugin installation also lets the plugin host discover the standard desktop workspace and configure `DEEPTUTOR_HOME`; running the installer first is no longer required. An existing explicit value is preserved, and no files are created when no valid desktop configuration exists. Fully restart Magpie afterwards.
 
 ---
 
@@ -52,7 +52,7 @@ Or with the Magpie CLI: `magpie plugin add github:Emilia06120878/magpie-agent-de
 
 - **Magpie** installed, with the gateway answering on `127.0.0.1:3425`.
 - The **Open DeepTutor desktop app**, or **DeepTutor CLI 1.7.0 or newer**, installed and started once so that `data/user/settings/model_catalog.json` exists.
-- The installer discovers the workspace for you. For a manual install, `DEEPTUTOR_HOME` must be visible to **Magpie's process environment**; setting it only in DeepTutor's own launcher is not enough.
+- Standard Windows / macOS desktop workspaces are discovered by either the installer or the plugin host. Manual `DEEPTUTOR_HOME` configuration is only needed for custom locations, legacy installations without a CLI, or other special cases; in those cases it must be visible to **Magpie's process environment**, not only to DeepTutor's own launcher.
 - At least one model or routing group configured in Magpie, plus at least one MCP server in the Library if you want MCP tools.
 
 ### Steps
@@ -69,20 +69,22 @@ Or with the Magpie CLI: `magpie plugin add github:Emilia06120878/magpie-agent-de
 
 ## How desktop detection works
 
-The Open DeepTutor desktop app does not require a `deeptutor` command and does not keep its writable data in the application install folder. The installer and preflight tool use these **standard OS locations**:
+The Open DeepTutor desktop app does not require a `deeptutor` command and does not keep its writable data in the application install folder. The plugin host, installer and preflight tool use these **standard OS locations**:
 
 | Platform | Workspace |
 | :--- | :--- |
 | Windows | `%LOCALAPPDATA%\Open DeepTutor\workspace` |
 | macOS | `~/Library/Application Support/Open DeepTutor/workspace` |
 
-Discovery requires an existing `data/user/settings/model_catalog.json`; it never creates a file just to make detection succeed. The selected workspace is passed to the descriptor's `$DEEPTUTOR_HOME`, allowing Magpie's directory check to detect DeepTutor.
+Discovery requires an existing `data/user/settings/model_catalog.json`; it never creates a file just to make detection succeed. On direct installation, the plugin host sets `DEEPTUTOR_HOME` in its own process and persists it for future Magpie processes, allowing Magpie's directory check to detect DeepTutor.
 
-- When both editions are installed, the Open DeepTutor desktop workspace wins by default.
+- An existing non-empty `DEEPTUTOR_HOME` is treated as an explicit user choice and is neither overwritten nor persisted again by the plugin host. The installer and doctor still prefer desktop by default unless explicitly overridden.
+- On direct installation, Windows writes the current user's environment; macOS writes the plugin's own per-user LaunchAgent and calls `launchctl`. Set `MAGPIE_DEEPTUTOR_NO_PERSIST=1` to configure only the current plugin host without user-level persistence; with this opt-out, the surrounding environment must still supply the variable to Magpie or detection will not survive a restart.
+- A persistence error does not prevent the plugin or MCP bridge from loading. It is recorded in the plugin log and load state, and can be corrected later with the installer or manual configuration.
 - On Windows, `.\install.ps1 -Workspace <workspace>` explicitly overrides it; add `-CheckOnly` to inspect without installing or changing the environment.
 - On macOS / Linux, use `MAGPIE_DEEPTUTOR_HOME=<workspace>`; `CHECK_ONLY=1 sh install.sh` only inspects.
 - From a source checkout, `node tools/doctor.mjs --json` shows the selected workspace. `--home <workspace>` has the highest priority; the doctor also honors the installer's explicit `MAGPIE_DEEPTUTOR_HOME` override.
-- Fully restart Magpie after changing its environment. The plugin does not read or write DeepTutor's app install directory, and its rules contain no machine-specific user names or drive letters.
+- Fully restart Magpie after installation or environment changes. The plugin does not read or write DeepTutor's app install directory, and its rules contain no machine-specific user names or drive letters.
 
 ---
 
@@ -169,7 +171,7 @@ The resulting `services.llm` structure (abridged):
 
 ## Notes
 
-- Prefer letting the installer set `DEEPTUTOR_HOME`. For a manual install without it, Magpie expands the model path to the drive root and MCP sync is refused; `tools/doctor.mjs` reports this beforehand.
+- Standard desktop workspaces get `DEEPTUTOR_HOME` from the plugin host or installer. If a custom location is not configured correctly, Magpie expands the model path to the drive root and MCP sync is refused; `tools/doctor.mjs` reports this beforehand.
 - The legacy CLI requires DeepTutor 1.7.0 or newer. The desktop app uses its managed runtime, so neither a `deeptutor` command nor the version of an unrelated legacy CLI is required.
 - A model switch takes effect on the next chat; for a long-lived `deeptutor serve` process, restarting once is safer.
 - DeepTutor does not watch `mcp.json`. After Library MCP assignments change, restart `deeptutor serve` to refresh live MCP connections.
@@ -180,7 +182,7 @@ The resulting `services.llm` structure (abridged):
 
 ### The new desktop app is installed, but Magpie says “not detected”
 
-Start Open DeepTutor once, run this repository's Windows / macOS installer, and fully restart Magpie. Do not only repeat `magpie plugin add`: that command does not configure the workspace environment variable.
+Start Open DeepTutor once and upgrade to plugin 0.3.1 or newer. Standard Windows / macOS workspaces are now configured even after direct installation; fully restart Magpie after installing or upgrading. An existing `DEEPTUTOR_HOME` is preserved, so if it points to the wrong place, use the installer's explicit workspace override.
 
 From a source checkout, run `node tools/doctor.mjs`. `Open DeepTutor desktop workspace` confirms that the new app was found. If another directory was selected, use the installer's explicit override. Also check that the model configuration path shown by `magpie ls` ends in `data/user/settings/model_catalog.json` under the selected workspace, rather than pointing at a drive root.
 
@@ -215,9 +217,11 @@ Run `node tools/doctor.mjs --json` and check the bridge and `mcp.json` counts, a
 ## Repository layout
 
 ```text
-index.mjs                     Bun plugin host: bridge file, watcher and MCP sync
+index.mjs                     Bun plugin host: desktop environment and MCP sync
 deeptutor.agent.mjs           moejs Agent descriptor and connect()
 lib/constants.mjs             paths, env expansion and atomic JSON writes
+lib/home-paths.mjs            standard Windows / macOS desktop workspace paths
+lib/desktop-environment.mjs   direct-install environment setup and persistence
 lib/mcp-bridge.mjs            claude mcpServers → DeepTutor servers translation
 package.json                  package metadata and the Magpie declaration
 install.sh / install.ps1      one-line installer (macOS/Linux · Windows)

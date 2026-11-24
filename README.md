@@ -14,7 +14,7 @@
 - **断开即还原**：连接时逐键备份原值，断开或卸载后恢复为写入前的配置，不影响原有的 profile。
 - **资源库 MCP 可选**：Magpie 资源页可以把 MCP 服务勾选给 DeepTutor，插件会翻译到 DeepTutor 的 `mcp.json`；用户自己添加的 MCP 服务不会被覆盖。
 - **不动其它配置**：模型同步不修改 `embedding`、`search`、`setup.json`；MCP 同步只写 `mcp.json` 的 `servers`。
-- **自动识别新版桌面端**：安装脚本按操作系统的标准数据目录定位 Open DeepTutor，不依赖安装盘符、用户名或旧版 `deeptutor` 命令。
+- **自动识别新版桌面端**：直接安装插件或使用安装脚本，都会按操作系统的标准数据目录定位 Open DeepTutor，不依赖安装盘符、用户名或旧版 `deeptutor` 命令。
 
 ---
 
@@ -32,7 +32,7 @@ curl -fsSL https://raw.githubusercontent.com/Emilia06120878/magpie-agent-deeptut
 powershell -c "irm https://raw.githubusercontent.com/Emilia06120878/magpie-agent-deeptutor/main/install.ps1 | iex"
 ```
 
-**新版桌面端请优先使用安装脚本。** 脚本会识别标准数据目录、为 Magpie 配置 `DEEPTUTOR_HOME`，然后再安装插件。Windows 会写入当前用户的环境变量；macOS 会通过 `launchctl` 和用户 LaunchAgent 传递。完成后重启 Magpie，让它继承新环境。
+安装脚本会识别标准数据目录、为 Magpie 配置 `DEEPTUTOR_HOME`，然后安装插件；需要显式指定工作区或只做安装前检查时，仍推荐使用它。Windows 会写入当前用户的环境变量；macOS 会通过 `launchctl` 和用户 LaunchAgent 传递。完成后重启 Magpie，让它继承新环境。
 
 也可以在 Magpie → **Plugins** 中添加仓库地址：
 
@@ -42,7 +42,7 @@ github:Emilia06120878/magpie-agent-deeptutor
 
 或用 Magpie CLI：`magpie plugin add github:Emilia06120878/magpie-agent-deeptutor`
 
-> 直接添加插件不会运行定位脚本。如果 Magpie 显示“未检测到”，请改用上面的安装脚本，或先按下文运行体检并配置 `DEEPTUTOR_HOME`。
+> 从 0.3.1 起，直接添加插件也会由插件宿主自动定位标准桌面工作区并配置 `DEEPTUTOR_HOME`，不再要求先运行安装脚本。已存在的显式配置会被保留；找不到有效的桌面配置时不会创建文件。完成后仍需完全重启 Magpie。
 
 ---
 
@@ -52,7 +52,7 @@ github:Emilia06120878/magpie-agent-deeptutor
 
 - 本机已安装 **Magpie**，网关在 `127.0.0.1:3425` 正常响应。
 - 本机已安装 **Open DeepTutor 桌面端**，或 **DeepTutor CLI 1.7.0 及以上**。先启动一次 DeepTutor，让它创建 `data/user/settings/model_catalog.json`。
-- 使用安装脚本时不需要手工查目录或设置环境变量；手动安装时，`DEEPTUTOR_HOME` 必须能被 **Magpie 进程**读取。仅在 DeepTutor 自己的启动脚本里设置是不够的。
+- 标准 Windows / macOS 桌面工作区可由安装脚本或插件宿主自动发现。只有使用自定义位置、旧版无 CLI 的安装或其他特殊情况时，才需要手工确保 `DEEPTUTOR_HOME` 能被 **Magpie 进程**读取；仅在 DeepTutor 自己的启动脚本里设置是不够的。
 - Magpie 中至少已添加一个可用模型或路由组；如需 MCP 工具，还需在资源库中有至少一个 MCP 服务。
 
 ### 步骤
@@ -69,20 +69,22 @@ github:Emilia06120878/magpie-agent-deeptutor
 
 ## 新版桌面端如何被探测
 
-Open DeepTutor 桌面端不要求存在 `deeptutor` 命令，也不把数据放在软件安装目录。安装脚本和体检工具使用以下**系统标准位置**：
+Open DeepTutor 桌面端不要求存在 `deeptutor` 命令，也不把数据放在软件安装目录。插件宿主、安装脚本和体检工具使用以下**系统标准位置**：
 
 | 系统 | 工作区位置 |
 | :--- | :--- |
 | Windows | `%LOCALAPPDATA%\Open DeepTutor\workspace` |
 | macOS | `~/Library/Application Support/Open DeepTutor/workspace` |
 
-定位后会检查工作区里是否已有 `data/user/settings/model_catalog.json`，不会为了“探测成功”而创建文件。随后把该工作区传给插件声明中的 `$DEEPTUTOR_HOME`，Magpie 再通过目录检测识别 DeepTutor。
+定位后会检查工作区里是否已有 `data/user/settings/model_catalog.json`，不会为了“探测成功”而创建文件。直接安装时，插件宿主会设置自己进程中的 `DEEPTUTOR_HOME`，并持久化给以后的 Magpie 进程；Magpie 再通过目录检测识别 DeepTutor。
 
-- 新旧两版同时安装时，默认优先选择 Open DeepTutor 桌面端。
+- 已存在的非空 `DEEPTUTOR_HOME` 被视为用户显式配置，插件宿主不会覆盖或再次持久化。安装脚本和体检工具默认优先选择桌面端，但仍可显式覆盖。
+- 直接安装时，Windows 写入当前用户环境变量；macOS 写入插件自己的用户 LaunchAgent 并调用 `launchctl`。设置 `MAGPIE_DEEPTUTOR_NO_PERSIST=1` 可只配置当前插件宿主，不做用户级持久化；使用该开关时仍需由外部环境向 Magpie 提供此变量，否则重启后不能保持检测结果。
+- 持久化失败不会阻止插件或 MCP 加载；错误会写入插件日志和加载状态，可随后用安装脚本或手工方式修正。
 - Windows 可用 `.\install.ps1 -Workspace <工作区路径>` 显式指定；加 `-CheckOnly` 只检查、不安装、不写环境变量。
 - macOS / Linux 可用 `MAGPIE_DEEPTUTOR_HOME=<工作区路径>` 显式指定；`CHECK_ONLY=1 sh install.sh` 只检查。
 - 在源码目录运行 `node tools/doctor.mjs --json` 可查看实际选中的工作区；`--home <工作区路径>` 的优先级最高，也会识别安装脚本的 `MAGPIE_DEEPTUTOR_HOME` 显式覆盖。
-- 修改环境变量后需要**完全退出并重新打开 Magpie**。插件仍然不读写 DeepTutor 的应用安装目录，源码中也没有特定电脑的用户名或盘符。
+- 安装或修改环境变量后需要**完全退出并重新打开 Magpie**。插件仍然不读写 DeepTutor 的应用安装目录，源码中也没有特定电脑的用户名或盘符。
 
 ---
 
@@ -169,7 +171,7 @@ Magpie 资源库勾选
 
 ## 注意事项
 
-- 推荐让安装脚本设置 `DEEPTUTOR_HOME`。手动安装但未设置时，Magpie 展开模型配置路径会落到磁盘根目录；MCP 桥接会拒绝同步，`tools/doctor.mjs` 会提前报告。
+- 标准桌面工作区会由插件宿主或安装脚本设置 `DEEPTUTOR_HOME`。自定义位置若未正确设置，Magpie 展开模型配置路径会落到磁盘根目录；MCP 桥接会拒绝同步，`tools/doctor.mjs` 会提前报告。
 - 旧版 CLI 要求 DeepTutor 1.7.0 及以上。新版桌面端使用自身托管的运行时，不要求 `deeptutor` 命令存在，也不读取旧版 CLI 的版本。
 - 切换模型后需要新开对话才会生效；`deeptutor serve` 长期运行时重启一次更稳妥。
 - DeepTutor 不会自动监视 `mcp.json`。资源库勾选变化后，若 DeepTutor 正在运行，重启 `deeptutor serve` 以刷新 MCP 连接。
@@ -180,7 +182,7 @@ Magpie 资源库勾选
 
 ### 已安装新版桌面端，但 Magpie 显示“未检测到”
 
-先启动一次 Open DeepTutor，再运行本仓库的 Windows / macOS 安装脚本，并完全重启 Magpie。不要只重新执行 `magpie plugin add`，因为那条命令不会配置工作区环境变量。
+先启动一次 Open DeepTutor，并升级到插件 0.3.1 或更新版本。标准 Windows / macOS 工作区在直接安装后也会自动配置；安装或升级后完全重启 Magpie。如果已有 `DEEPTUTOR_HOME`，插件会保留它；该值若指向错误位置，请用安装脚本显式指定正确工作区。
 
 在源码目录运行 `node tools/doctor.mjs`：如果显示 `Open DeepTutor desktop workspace`，说明已找到新版；如果找到了其他目录，用安装脚本的显式覆盖参数指定正确工作区。还应确认 `magpie ls` 中模型配置路径以所选工作区的 `data/user/settings/model_catalog.json` 结尾，而不是磁盘根目录。
 
@@ -215,9 +217,11 @@ Magpie 中还没有配置可用模型。先在 Magpie 里添加账号或模型�
 ## 仓库结构
 
 ```text
-index.mjs                     Bun 插件宿主：创建/监听 MCP 桥接文件并同步
+index.mjs                     Bun 插件宿主：桌面环境、MCP 桥接监听与同步
 deeptutor.agent.mjs           moejs Agent 描述符与 connect()
 lib/constants.mjs             路径、环境变量展开与原子 JSON 写入
+lib/home-paths.mjs            Windows / macOS 标准桌面工作区定位
+lib/desktop-environment.mjs   直接安装后的环境配置与用户级持久化
 lib/mcp-bridge.mjs            claude mcpServers → DeepTutor servers 翻译
 package.json                  包信息与 Magpie 插件声明
 install.sh / install.ps1      一键安装脚本（macOS/Linux · Windows）

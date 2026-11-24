@@ -134,7 +134,10 @@ test('POSIX installer CheckOnly honors the explicit generic override', {
 });
 
 test('runtime rules and documentation contain no paths from the development machine', () => {
-  const files = ['deeptutor.agent.mjs', 'install.ps1', 'install.sh', 'tools/doctor.mjs', 'lib/home-paths.mjs'];
+  const files = [
+    'deeptutor.agent.mjs', 'index.mjs', 'install.ps1', 'install.sh',
+    'tools/doctor.mjs', 'lib/home-paths.mjs', 'lib/desktop-environment.mjs',
+  ];
   for (const relative of files) {
     const text = fs.readFileSync(path.join(ROOT, relative), 'utf8');
     assert.doesNotMatch(text, /E:\\DeepTutor|D:\\Open DeepTutor|33528/, relative);

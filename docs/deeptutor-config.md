@@ -25,8 +25,12 @@ folder. Its workspace is derived from the operating system and current user:
 - Windows: `%LOCALAPPDATA%\Open DeepTutor\workspace`
 - macOS: `~/Library/Application Support/Open DeepTutor/workspace`
 
-The installer discovers these locations and exports `DEEPTUTOR_HOME` for Magpie.
-No user name, drive letter or application install path is built into the plugin.
+The plugin host and installer discover these locations and export `DEEPTUTOR_HOME`
+for Magpie. Direct `magpie plugin add` installation also persists the discovered
+value for future Windows users or macOS login sessions, while preserving an
+existing explicit value. Set `MAGPIE_DEEPTUTOR_NO_PERSIST=1` to opt out of
+persistence. No user name, drive letter or application install path is built into
+the plugin.
 
 ## How the legacy CLI `<home>` is resolved
 

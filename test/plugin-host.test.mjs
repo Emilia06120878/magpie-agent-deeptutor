@@ -31,3 +31,35 @@ test('plugin host creates the bridge, syncs MCP and records state in a sandbox H
   assert.equal(state.lastLoad.mcp.count, 1);
   fs.rmSync(root, { recursive: true, force: true });
 });
+
+test('plugin host auto-configures a directly installed desktop and records persistence', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'deeptutor-host-desktop-'));
+  const home = path.join(root, 'home');
+  const localAppData = path.join(root, 'Local AppData');
+  const deeptutorHome = path.join(localAppData, 'Open DeepTutor', 'workspace');
+  const settings = path.join(deeptutorHome, 'data', 'user', 'settings');
+  fs.mkdirSync(settings, { recursive: true });
+  fs.writeFileSync(path.join(settings, 'model_catalog.json'), '{}\n');
+  fs.writeFileSync(path.join(settings, 'mcp.json'), JSON.stringify({ servers: {} }));
+
+  const env = { HOME: home, USERPROFILE: home, LOCALAPPDATA: localAppData };
+  let persisted;
+  const hooks = await plugin.server({}, undefined, env, {
+    platformName: 'win32',
+    homeDirectory: home,
+    persist: async (workspace) => {
+      persisted = workspace;
+      return { method: 'test-persistence' };
+    },
+  });
+  assert.deepEqual(hooks, {});
+  assert.equal(persisted, deeptutorHome);
+  assert.equal(env.DEEPTUTOR_HOME, deeptutorHome);
+  assert.ok(fs.existsSync(path.join(settings, 'mcp.json')));
+  const state = JSON.parse(fs.readFileSync(path.join(home, '.config', 'magpie', '.magpie-deeptutor-state.json'), 'utf8'));
+  assert.equal(state.lastLoad.environment.home, deeptutorHome);
+  assert.equal(state.lastLoad.environment.source, 'desktop');
+  assert.equal(state.lastLoad.environment.persisted, true);
+  assert.equal(state.lastLoad.environment.method, 'test-persistence');
+  fs.rmSync(root, { recursive: true, force: true });
+});
