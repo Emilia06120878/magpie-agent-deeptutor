@@ -89,8 +89,8 @@ DeepTutor's data folder, and the agent descriptor writes through the link.
           "api_version": "",
           "extra_headers": {},
           "models": [
-            { "id": "llm-model-<uuid>", "model": "group/workbuddyqodertrae-deepseek-flash",
-              "name": "workbuddyQoderTrae-deepseek-flash" }
+            { "id": "llm-model-<uuid>", "model": "group/acme-fast",
+              "name": "Acme Fast" }
           ],
           "api_format": "openai_chat",
           "wire_api": "chat_completions"

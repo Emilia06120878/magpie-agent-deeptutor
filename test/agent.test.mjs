@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { agent } from '../deeptutor.agent.mjs';
 import {
   catalogPath,
@@ -14,6 +15,18 @@ import {
   mcpBridgePath,
   mcpConfigPath,
 } from '../lib/constants.mjs';
+
+test('package.json declares magpie.icon for the Discover card, the same image as agent.icon', () => {
+  // Magpie's Plugins > Discover list reads package.json's magpie.icon (an https:
+  // URL or a data:image/ URL); the Agents page reads agent.icon. One image for
+  // both, so the plugin is never shown with the placeholder tile.
+  const pkg = JSON.parse(
+    fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf8'),
+  );
+  assert.match(pkg.magpie.icon, /^data:image\/(png|svg\+xml);base64,[A-Za-z0-9+/]+=*$/);
+  assert.ok(pkg.magpie.icon.length < (3 << 19), 'Magpie drops an icon longer than 1.5 MB');
+  assert.equal(pkg.magpie.icon, agent.icon);
+});
 
 test('agent descriptor declares a Claude-format MCP bridge', () => {
   assert.equal(agent.id, 'deeptutor');

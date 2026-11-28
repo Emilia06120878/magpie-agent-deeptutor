@@ -29,8 +29,8 @@
           "models": [
             {
               "id": "llm-model-agent-setup",
-              "name": "workbuddyQoderTrae-deepseek-flash",
-              "model": "group/workbuddyqodertrae-deepseek-flash"
+              "name": "Acme Fast",
+              "model": "group/acme-fast"
             }
           ],
           "api_format": "openai_chat",
@@ -54,8 +54,8 @@
           "models": [
             {
               "id": "embedding-model-agent-setup",
-              "name": "qwen3-vl-embedding-8b",
-              "model": "qwen3-vl-embedding-8b",
+              "name": "text-embedding-example",
+              "model": "text-embedding-example",
               "dimension": 4096,
               "supported_dimensions": ""
             }

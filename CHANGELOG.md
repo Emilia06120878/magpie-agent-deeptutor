@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.1 — 2026-11-28
+
+**Discover card icon**
+
+- Added `magpie.icon` to `package.json`. Magpie's Plugins → Discover list reads the icon from there, not from the agent module, so the plugin was listed with the placeholder tile although the Agents page showed the right mark.
+- The value is the same embedded 128×128 PNG of DeepTutor's app icon that `agent.icon` already carries; a test keeps the two identical.
+- Takes effect in Discover once the next `tagged.json` rebuild reads this `package.json` from the default branch.
+
+**Documentation privacy**
+
+- Replaced the real model and routing-group names in the README and docs examples, and in the test data, with invented ones. No behaviour change.
+- Replaced the private LAN and proxy-range addresses in the `NO_PROXY` troubleshooting example with documentation addresses (RFC 5737).
+- Added a test that fails when a private or proxy address is written into the docs or the test data again. It lists no model names, since such a list would publish the names it keeps out.
+
 ## 0.4.0 — 2026-11-25
 
 **Home-link desktop integration**

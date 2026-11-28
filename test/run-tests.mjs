@@ -64,7 +64,7 @@ function resolveLlm(catalog) {
 }
 
 const gateway = { url: 'http://127.0.0.1:3425', v1: 'http://127.0.0.1:3425/v1', key: 'magpie-deeptutor' };
-const model = { id: 'group/workbuddyqoderlobster-kimi-k3.1-pro', name: 'WorkbuddyQoderLobster-Kimi K3.1 Pro' };
+const model = { id: 'group/acme-reasoning-pro', name: 'Acme Reasoning Pro' };
 
 console.log('agent declaration');
 test('id/name are set; detection is by the home link, not a PATH binary', () => {
@@ -159,9 +159,9 @@ test('the rest of the catalog is untouched', () => {
 test('switching models twice keeps one profile and the newest model', () => {
   const catalog = JSON.parse(readFileSync(fixturePath, 'utf8'));
   applyConnect(catalog, { gateway, model });
-  applyConnect(catalog, { gateway, model: { id: 'group/oneday-glm5.3', name: 'oneday-GLM5.3' } });
+  applyConnect(catalog, { gateway, model: { id: 'group/acme-chat', name: 'Acme Chat' } });
   assert.equal(catalog.services.llm.profiles.length, 1);
-  assert.equal(resolveLlm(catalog).model, 'group/oneday-glm5.3');
+  assert.equal(resolveLlm(catalog).model, 'group/acme-chat');
 });
 test('restoring the backed-up values gives the original array back', () => {
   const original = JSON.parse(readFileSync(fixturePath, 'utf8'));
@@ -180,9 +180,9 @@ test('the model path agent.model actually holds the model id after connect', () 
 
 console.log('\nall models at once');
 const many = [
-  { id: 'group/oneday-glm5.3', name: 'oneday-GLM5.3', context: 128000 },
-  { id: 'group/workbuddyqoderlobster-kimi-k3.1-pro', name: 'Kimi K3.1 Pro', context: 1048576 },
-  { id: 'zcode/GLM-5.2', name: 'GLM-5.2', context: 0 },
+  { id: 'group/acme-chat', name: 'Acme Chat', context: 128000 },
+  { id: 'group/acme-reasoning-pro', name: 'Acme Reasoning Pro', context: 1048576 },
+  { id: 'vendor-a/model-b', name: 'Model B', context: 0 },
 ];
 test('every model Magpie offers lands in the one profile, in order', () => {
   const patch = connect({ gateway, model: many[1], models: many });

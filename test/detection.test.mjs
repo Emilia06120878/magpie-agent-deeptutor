@@ -242,3 +242,43 @@ test('runtime rules and documentation contain no paths from the development mach
     assert.doesNotMatch(text, /E:\\DeepTutor|D:\\Open DeepTutor|33528/, relative);
   }
 });
+
+test('documentation and tests show no private or proxy address from the development machine', () => {
+  // NO_PROXY in the README's troubleshooting example once held the development
+  // machine's own LAN address and proxy range. Examples must stay invented.
+  // Model names are not listed here on purpose: a list would publish the very
+  // names it keeps out of the docs.
+  const files = [
+    'README.md', 'README.en.md', 'CHANGELOG.md',
+    'docs/deeptutor-config.md', 'docs/deeptutor-mcp.md', 'docs/agent-plugin-contract.md',
+    'test/run-tests.mjs', 'test/fixtures/model_catalog.json',
+  ];
+  // IPv4 only; IPv6 private addresses (fe80::/10, fc00::/7) are not checked.
+  // 127.0.0.1 and ::1 are the plugin's own gateway and stay allowed, as do the
+  // three RFC 5737 documentation blocks the examples use.
+  const candidates = /(?<![\w.])(?:\d{1,3}\.){3}\d{1,3}(?![\w.])/g;
+  for (const relative of files) {
+    const text = fs.readFileSync(path.join(ROOT, relative), 'utf8');
+    for (const [address] of text.matchAll(candidates)) {
+      assert.equal(isPrivateAddress(address), false, `${relative} shows a private or proxy address: ${address}`);
+    }
+  }
+});
+
+// Whether an a.b.c.d string is a private, loopback, link-local, CGNAT or
+// fake-ip IPv4 address. Kept in plain arithmetic rather than one long regular
+// expression so each range can be read and tested on its own.
+function isPrivateAddress(address) {
+  const octets = address.split('.').map(Number);
+  if (octets.length !== 4 || octets.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return false;
+  const [a, b] = octets;
+  // 127.0.0.1 is the gateway Magpie serves and appears throughout the docs.
+  if (a === 127 && b === 0) return octets[2] !== 0 || octets[3] !== 1;
+  if (a === 10 || a === 127) return true;
+  if (a === 100) return b >= 64 && b <= 127; // CGNAT
+  if (a === 169) return b === 254; // link-local
+  if (a === 172) return b >= 16 && b <= 31;
+  if (a === 192) return b === 168; // 192.0.2.x is documentation, not private
+  if (a === 198) return b === 18 || b === 19; // fake-ip; 198.51.100.x is documentation
+  return false;
+}
